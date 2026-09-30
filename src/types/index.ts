@@ -182,7 +182,7 @@ export interface RagasBenchmarkReport {
 }
 
 export interface ExternalSoftwareConfig {
-  activeSoftware: 'ragas' | 'langsmith' | 'langfuse' | 'traceloop' | 'custom_webhook';
+  activeSoftware: 'render_backend' | 'ragas' | 'langsmith' | 'langfuse' | 'traceloop' | 'custom_webhook';
   enabled: boolean;
   endpointUrl: string;
   apiKey?: string;

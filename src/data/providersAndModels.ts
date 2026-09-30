@@ -110,13 +110,15 @@ export const AI_PROVIDERS: AIProviderInfo[] = [
   },
   {
     id: 'custom',
-    name: 'Custom / Local API',
-    tagline: 'Connect any OpenAI-compatible API (Ollama, LM Studio, vLLM)',
-    badge: 'Self-Hosted',
-    color: '#8e918f',
-    defaultBaseUrl: 'http://localhost:11434/v1',
-    keyHelpUrl: 'https://github.com/ollama/ollama',
-    placeholderKey: 'Optional or provider key',
+    name: 'Custom / Live Backend',
+    tagline: 'Connect live Render backend or OpenAI-compatible API',
+    badge: 'Live Backend',
+    color: '#8ab4f8',
+    defaultBaseUrl:
+      'https://dashboard.render.com/web/srv-daum9h67bikc73cur3tg/deploys/dep-daum9he7bikc73cur5u0?r=2026-09-30%4019%3A35%3A37%7E2026-09-30%4019%3A38%3A03',
+    keyHelpUrl:
+      'https://dashboard.render.com/web/srv-daum9h67bikc73cur3tg/deploys/dep-daum9he7bikc73cur5u0?r=2026-09-30%4019%3A35%3A37%7E2026-09-30%4019%3A38%3A03',
+    placeholderKey: 'Optional bearer token or API key',
   },
 ];
 

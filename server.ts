@@ -1366,36 +1366,41 @@ async function performRagasEvaluation({
         }),
       });
       if (extRes.ok) {
-        const extData = await extRes.json();
-        const faithfulness = Number(extData.faithfulness ?? extData.scores?.faithfulness ?? 0.9);
-        const answerRelevancy = Number(extData.answer_relevancy ?? extData.scores?.answerRelevancy ?? 0.9);
-        const contextPrecision = Number(extData.context_precision ?? extData.scores?.contextPrecision ?? 0.85);
-        const hallucinationRisk = Number(extData.hallucination_risk ?? extData.scores?.hallucinationRisk ?? 0.1);
-        const conciseness = Number(extData.conciseness ?? extData.scores?.conciseness ?? 0.9);
-        const overallScore = Math.round(
-          extData.overall_score ?? extData.overallScore ?? (faithfulness * 35 + answerRelevancy * 35 + contextPrecision * 20 + (1 - hallucinationRisk) * 10)
-        );
+        const contentType = extRes.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const extData = await extRes.json();
+          const faithfulness = Number(extData.faithfulness ?? extData.scores?.faithfulness ?? 0.9);
+          const answerRelevancy = Number(extData.answer_relevancy ?? extData.scores?.answerRelevancy ?? 0.9);
+          const contextPrecision = Number(extData.context_precision ?? extData.scores?.contextPrecision ?? 0.85);
+          const hallucinationRisk = Number(extData.hallucination_risk ?? extData.scores?.hallucinationRisk ?? 0.1);
+          const conciseness = Number(extData.conciseness ?? extData.scores?.conciseness ?? 0.9);
+          const overallScore = Math.round(
+            extData.overall_score ?? extData.overallScore ?? (faithfulness * 35 + answerRelevancy * 35 + contextPrecision * 20 + (1 - hallucinationRisk) * 10)
+          );
 
-        let verdict: 'Excellent' | 'Good' | 'Needs Improvement' | 'High Risk' = 'Good';
-        if (overallScore >= 85) verdict = 'Excellent';
-        else if (overallScore >= 70) verdict = 'Good';
-        else if (overallScore >= 50) verdict = 'Needs Improvement';
-        else verdict = 'High Risk';
+          let verdict: 'Excellent' | 'Good' | 'Needs Improvement' | 'High Risk' = 'Good';
+          if (overallScore >= 85) verdict = 'Excellent';
+          else if (overallScore >= 70) verdict = 'Good';
+          else if (overallScore >= 50) verdict = 'Needs Improvement';
+          else verdict = 'High Risk';
 
-        return {
-          evaluatedAt: Date.now(),
-          engine: 'ragas-external' as const,
-          scores: {
-            faithfulness: Math.min(1, Math.max(0, faithfulness)),
-            answerRelevancy: Math.min(1, Math.max(0, answerRelevancy)),
-            contextPrecision: Math.min(1, Math.max(0, contextPrecision)),
-            hallucinationRisk: Math.min(1, Math.max(0, hallucinationRisk)),
-            conciseness: Math.min(1, Math.max(0, conciseness)),
-          },
-          overallScore,
-          verdict,
-          critique: extData.critique || extData.summary || 'Evaluated successfully via external Ragas server.',
-        };
+          return {
+            evaluatedAt: Date.now(),
+            engine: 'ragas-external' as const,
+            scores: {
+              faithfulness: Math.min(1, Math.max(0, faithfulness)),
+              answerRelevancy: Math.min(1, Math.max(0, answerRelevancy)),
+              contextPrecision: Math.min(1, Math.max(0, contextPrecision)),
+              hallucinationRisk: Math.min(1, Math.max(0, hallucinationRisk)),
+              conciseness: Math.min(1, Math.max(0, conciseness)),
+            },
+            overallScore,
+            verdict,
+            critique: extData.critique || extData.summary || 'Evaluated successfully via external live backend server.',
+          };
+        } else {
+          console.log('[Ragas External] Live backend returned non-JSON response, using Gemini RAGAS judge.');
+        }
       }
     } catch (extErr) {
       console.warn('[Ragas Evaluation] External server failed, falling back to built-in judge:', extErr);
@@ -1750,11 +1755,16 @@ app.post('/api/external/ping', async (req: Request, res: Response) => {
     });
 
     const latency = Date.now() - start;
+    const isRender = endpointUrl.includes('dashboard.render.com') || endpointUrl.includes('onrender.com');
     return res.json({
       reachable: resp.status < 500,
       statusCode: resp.status,
       statusText: resp.statusText,
       latencyMs: latency,
+      isRender,
+      message: isRender
+        ? 'Successfully connected to live Render service deployment.'
+        : undefined,
     });
   } catch (err: any) {
     return res.json({

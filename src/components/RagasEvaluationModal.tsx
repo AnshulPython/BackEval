@@ -33,6 +33,9 @@ import {
   getRagasReports,
   saveRagasReports,
   getStoredApiKeys,
+  DEFAULT_LIVE_RENDER_BACKEND_URL,
+  LIVE_RENDER_SERVICE_ID,
+  LIVE_RENDER_DEPLOY_ID,
 } from '../utils/storage';
 import { DEFAULT_BENCHMARK_DATASETS } from '../data/ragasDatasets';
 
@@ -1041,12 +1044,38 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
                 <div className="text-xs font-medium uppercase tracking-wider text-[#8e918f]">
                   External Frameworks
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {[
-                    { id: 'ragas', name: 'Ragas Server', defaultUrl: 'http://localhost:8000/eval' },
-                    { id: 'langsmith', name: 'LangSmith', defaultUrl: 'https://api.smith.langchain.com/eval' },
-                    { id: 'langfuse', name: 'Langfuse', defaultUrl: 'https://cloud.langfuse.com/api/eval' },
-                    { id: 'custom_webhook', name: 'Custom Webhook', defaultUrl: 'https://my-eval-service.com/api/score' },
+                    {
+                      id: 'render_backend',
+                      name: 'Render Live Backend',
+                      tag: 'srv-daum9h67bikc73cur3tg (Live)',
+                      defaultUrl: DEFAULT_LIVE_RENDER_BACKEND_URL,
+                    },
+                    {
+                      id: 'ragas',
+                      name: 'Ragas Remote Server',
+                      tag: 'Custom Evaluator API',
+                      defaultUrl: DEFAULT_LIVE_RENDER_BACKEND_URL,
+                    },
+                    {
+                      id: 'langsmith',
+                      name: 'LangSmith',
+                      tag: 'LangChain Cloud',
+                      defaultUrl: 'https://api.smith.langchain.com/eval',
+                    },
+                    {
+                      id: 'langfuse',
+                      name: 'Langfuse',
+                      tag: 'Open Source Observability',
+                      defaultUrl: 'https://cloud.langfuse.com/api/eval',
+                    },
+                    {
+                      id: 'custom_webhook',
+                      name: 'Custom Webhook',
+                      tag: 'HTTP POST Hook',
+                      defaultUrl: 'https://my-eval-service.com/api/score',
+                    },
                   ].map((soft) => (
                     <button
                       key={soft.id}
@@ -1055,15 +1084,17 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
                           ...extConfig,
                           activeSoftware: soft.id as any,
                           endpointUrl: soft.defaultUrl,
+                          enabled: true,
                         });
                       }}
-                      className={`p-3 rounded-xl border text-left transition-colors ${
+                      className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
                         extConfig.activeSoftware === soft.id
                           ? 'bg-[#282a2c] border-[#8ab4f8] text-white'
                           : 'bg-[#131314] hover:bg-[#282a2c]/50 border-[#2d2f31] text-[#c4c7c5]'
                       }`}
                     >
-                      <div className="text-xs font-medium">{soft.name}</div>
+                      <div className="text-xs font-semibold">{soft.name}</div>
+                      <div className="text-[10px] text-[#8e918f] truncate font-mono mt-0.5">{soft.tag}</div>
                     </button>
                   ))}
                 </div>
@@ -1073,10 +1104,10 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
                 <div className="flex items-center justify-between pb-3 border-b border-[#2d2f31]">
                   <div>
                     <div className="text-xs font-medium text-[#e3e3e3]">
-                      Route to External Server
+                      Route to Live Backend Server
                     </div>
                     <div className="text-[11px] text-[#8e918f]">
-                      Sends evaluation requests to your local or remote instance.
+                      Routes benchmarking and Ragas evaluation requests to the configured live backend.
                     </div>
                   </div>
                   <button
@@ -1095,24 +1126,52 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
 
                 <div className="space-y-3">
                   <div>
-                    <label className="text-xs font-medium text-[#c4c7c5]">Endpoint URL:</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-[#c4c7c5]">Backend Endpoint URL:</label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExtConfig({
+                            ...extConfig,
+                            endpointUrl: DEFAULT_LIVE_RENDER_BACKEND_URL,
+                            enabled: true,
+                          })
+                        }
+                        className="text-[11px] text-[#8ab4f8] hover:text-[#aecbfa] hover:underline"
+                      >
+                        Reset to Render Deploy URL
+                      </button>
+                    </div>
                     <div className="flex gap-2 mt-1">
                       <input
                         type="text"
                         value={extConfig.endpointUrl}
                         onChange={(e) => setExtConfig({ ...extConfig, endpointUrl: e.target.value })}
-                        placeholder="http://localhost:8000/eval"
+                        placeholder={DEFAULT_LIVE_RENDER_BACKEND_URL}
                         className="flex-1 px-3 py-2 bg-[#1e1f20] border border-[#2d2f31] rounded-xl text-xs text-white focus:outline-none focus:border-[#444746] font-mono"
                       />
                       <button
                         onClick={handlePingServer}
                         disabled={isPinging || !extConfig.endpointUrl}
-                        className="px-4 py-2 bg-[#282a2c] hover:bg-[#333538] text-[#c4c7c5] hover:text-white rounded-full text-xs font-medium transition-colors"
+                        className="px-4 py-2 bg-[#282a2c] hover:bg-[#333538] text-[#c4c7c5] hover:text-white rounded-full text-xs font-medium transition-colors cursor-pointer shrink-0"
                       >
                         {isPinging ? 'Pinging...' : 'Test Connection'}
                       </button>
                     </div>
                   </div>
+
+                  {/* Render Live Service Advisory */}
+                  {extConfig.endpointUrl?.includes('dashboard.render.com') && (
+                    <div className="p-3 rounded-xl bg-[#8ab4f8]/10 border border-[#8ab4f8]/30 text-xs text-[#c4c7c5] space-y-1">
+                      <div className="flex items-center gap-1.5 font-medium text-white">
+                        <span className="w-2 h-2 rounded-full bg-[#81c995] animate-pulse" />
+                        <span>Render Live Deployment Configured ({LIVE_RENDER_SERVICE_ID})</span>
+                      </div>
+                      <div className="text-[11px] text-[#8e918f] leading-relaxed">
+                        Currently targeting deploy <code className="text-[#8ab4f8]">{LIVE_RENDER_DEPLOY_ID}</code> on Render instead of localhost. If your service has a direct <code className="text-[#8ab4f8]">.onrender.com</code> public address, you can also paste that URL here.
+                      </div>
+                    </div>
+                  )}
 
                   {pingResult && (
                     <div className={`p-3 rounded-xl border text-xs ${pingResult.reachable ? 'bg-[#1e1f20] text-[#81c995] border-[#81c995]/30' : 'bg-[#1e1f20] text-[#f28b82] border-[#f28b82]/30'}`}>

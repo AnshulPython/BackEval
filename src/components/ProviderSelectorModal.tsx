@@ -26,6 +26,9 @@ import {
   saveStoredApiKey,
   clearStoredApiKey,
   setActiveProvider,
+  DEFAULT_LIVE_RENDER_BACKEND_URL,
+  getLiveBackendUrl,
+  LIVE_RENDER_SERVICE_ID,
 } from '../utils/storage';
 
 interface ProviderSelectorModalProps {
@@ -46,9 +49,18 @@ export const ProviderSelectorModal: React.FC<ProviderSelectorModalProps> = ({
   const [selectedProvider, setSelectedProvider] = useState<AIProviderId>(activeProvider);
   const [storedKeys, setStoredKeys] = useState<StoredAPIKeys>(getStoredApiKeys());
   const [keyInput, setKeyInput] = useState<string>(storedKeys[activeProvider] || '');
-  const [customBaseUrl, setCustomBaseUrl] = useState<string>(
-    storedKeys.customBaseUrl || 'http://localhost:11434/v1'
-  );
+  const [customBaseUrl, setCustomBaseUrl] = useState<string>(() => {
+    const existing = storedKeys.customBaseUrl;
+    if (
+      existing &&
+      !existing.includes('localhost:3001') &&
+      !existing.includes('localhost:5000') &&
+      !existing.includes('localhost:11434')
+    ) {
+      return existing;
+    }
+    return getLiveBackendUrl();
+  });
   const [showKey, setShowKey] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [validationStatus, setValidationStatus] = useState<{
@@ -293,21 +305,36 @@ export const ProviderSelectorModal: React.FC<ProviderSelectorModalProps> = ({
               )}
 
               {selectedProvider === 'custom' && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-[#c4c7c5] flex items-center gap-1.5">
-                    <Server className="w-3.5 h-3.5 text-[#8e918f]" />
-                    Custom Base URL:
-                  </label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-[#c4c7c5] flex items-center gap-1.5">
+                      <Server className="w-3.5 h-3.5 text-[#8ab4f8]" />
+                      Live Backend / API URL:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomBaseUrl(DEFAULT_LIVE_RENDER_BACKEND_URL)}
+                      className="text-[11px] text-[#8ab4f8] hover:text-[#aecbfa] hover:underline"
+                    >
+                      Reset to Render Live Backend
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={customBaseUrl}
                     onChange={(e) => setCustomBaseUrl(e.target.value)}
-                    placeholder="http://localhost:11434/v1"
+                    placeholder={DEFAULT_LIVE_RENDER_BACKEND_URL}
                     className="w-full px-3.5 py-2.5 bg-[#131314] border border-[#2d2f31] rounded-xl text-xs text-white placeholder-[#8e918f] focus:outline-none focus:border-[#444746] font-mono"
                   />
-                  <p className="text-[11px] text-[#8e918f]">
-                    Supports Ollama, LM Studio, vLLM, LocalAI or custom proxies.
-                  </p>
+                  <div className="p-2.5 rounded-xl bg-[#1e1f20] border border-[#2d2f31] text-[11px] text-[#8e918f] space-y-1">
+                    <div className="text-[#c4c7c5] font-medium flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#81c995]" />
+                      <span>Live Render Service: {LIVE_RENDER_SERVICE_ID}</span>
+                    </div>
+                    <p className="text-[10px] leading-relaxed">
+                      Connected to live Render deployment. If you have an <code className="text-[#8ab4f8]">.onrender.com</code> public address, you can also paste it directly.
+                    </p>
+                  </div>
                 </div>
               )}
 

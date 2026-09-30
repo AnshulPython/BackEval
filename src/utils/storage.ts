@@ -365,12 +365,40 @@ export function setActiveSessionId(id: string): void {
   } catch {}
 }
 
-const EXTERNAL_CONFIG_KEY = 'createai_external_software_config_v1';
+export const DEFAULT_LIVE_RENDER_BACKEND_URL =
+  'https://dashboard.render.com/web/srv-daum9h67bikc73cur3tg/deploys/dep-daum9he7bikc73cur5u0?r=2026-09-30%4019%3A35%3A37%7E2026-09-30%4019%3A38%3A03';
+
+export const LIVE_RENDER_SERVICE_ID = 'srv-daum9h67bikc73cur3tg';
+export const LIVE_RENDER_DEPLOY_ID = 'dep-daum9he7bikc73cur5u0';
+
+const EXTERNAL_CONFIG_KEY = 'createai_external_software_config_v2';
+const LIVE_BACKEND_STORAGE_KEY = 'llm_engine_live_backend_url_v2';
+
+export function getLiveBackendUrl(): string {
+  try {
+    const raw = localStorage.getItem(LIVE_BACKEND_STORAGE_KEY);
+    if (
+      raw &&
+      !raw.includes('localhost:3001') &&
+      !raw.includes('localhost:5000') &&
+      !raw.includes('localhost:8000')
+    ) {
+      return raw.trim();
+    }
+  } catch {}
+  return DEFAULT_LIVE_RENDER_BACKEND_URL;
+}
+
+export function setLiveBackendUrl(url: string): void {
+  try {
+    localStorage.setItem(LIVE_BACKEND_STORAGE_KEY, url.trim());
+  } catch {}
+}
 
 export const DEFAULT_EXTERNAL_CONFIG: ExternalSoftwareConfig = {
-  activeSoftware: 'ragas',
-  enabled: false,
-  endpointUrl: 'http://localhost:8000/eval',
+  activeSoftware: 'render_backend',
+  enabled: true,
+  endpointUrl: DEFAULT_LIVE_RENDER_BACKEND_URL,
   apiKey: '',
   autoEvaluateOnMessage: false,
   exportFormat: 'ragas_dataset',
@@ -389,7 +417,19 @@ export function getExternalConfig(): ExternalSoftwareConfig {
   try {
     const raw = localStorage.getItem(EXTERNAL_CONFIG_KEY);
     if (raw) {
-      return { ...DEFAULT_EXTERNAL_CONFIG, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      // Automatically route away from obsolete local ports 3001, 5000, 8000 to the live Render backend
+      if (
+        !parsed.endpointUrl ||
+        parsed.endpointUrl.includes('localhost:3001') ||
+        parsed.endpointUrl.includes('localhost:5000') ||
+        parsed.endpointUrl.includes('localhost:8000')
+      ) {
+        parsed.endpointUrl = DEFAULT_LIVE_RENDER_BACKEND_URL;
+        parsed.activeSoftware = 'render_backend';
+        parsed.enabled = true;
+      }
+      return { ...DEFAULT_EXTERNAL_CONFIG, ...parsed };
     }
   } catch {}
   return DEFAULT_EXTERNAL_CONFIG;
