@@ -1800,3 +1800,21 @@ startServer().catch((err) => {
   console.error('[CreateAI] Failed to start server:', err);
   process.exit(1);
 });
+import cors from 'cors';
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://your-app.vercel.app' // Add your deployed Vercel domain
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS'));
+    }
+  },
+  credentials: true
+}));
