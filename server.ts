@@ -1,14 +1,379 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
-import { PROVIDER_MODELS } from './src/data/providersAndModels';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Built-in curated models catalog for server API routes
+const PROVIDER_MODELS: Record<string, any[]> = {
+  gemini: [
+    {
+      id: 'gemini-3.1-flash-lite',
+      name: 'Gemini 3.1 Flash Lite',
+      provider: 'gemini',
+      description: 'Ultra-lightweight, extremely high rate-limit quota. Instant responses for quick question answering.',
+      contextWindow: '1,000,000 tokens',
+      capabilities: ['webSearch', 'fastSpeed', 'jsonMode', 'codeExecution', 'vision', 'tts'],
+      recommended: true,
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'gemini-3.8-flash',
+      name: 'Gemini 3.8 Flash',
+      provider: 'gemini',
+      description: 'Google flagship multimodal model. Superb for general chat, coding, and reasoning (subject to free tier rate limits).',
+      contextWindow: '1,000,000 tokens',
+      capabilities: ['reasoning', 'webSearch', 'codeExecution', 'vision', 'tts', 'jsonMode', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'gemini-flash-latest',
+      name: 'Gemini Flash (Latest Stable)',
+      provider: 'gemini',
+      description: 'General-purpose high-speed Gemini Flash model with balanced quota distribution.',
+      contextWindow: '1,000,000 tokens',
+      capabilities: ['webSearch', 'fastSpeed', 'jsonMode', 'codeExecution', 'vision'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'gemini-3.1-flash-lite-image',
+      name: 'Gemini 3.1 Flash Lite Image',
+      provider: 'gemini',
+      description: 'Fast, high-efficiency AI image generation and visual transformation tasks.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['imageGeneration', 'vision'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      isPaid: true,
+      speed: 'Fast',
+      intelligenceLevel: 'High',
+    },
+    {
+      id: 'gemini-3.1-flash-image',
+      name: 'Gemini 3.1 Flash Image (HQ)',
+      provider: 'gemini',
+      description: 'Flagship high-quality image generation (up to 4K resolution) and multimodal creation.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['imageGeneration', 'vision', 'webSearch'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      isPaid: true,
+      speed: 'Balanced',
+      intelligenceLevel: 'Maximum',
+    },
+    {
+      id: 'gemini-3.1-pro-preview',
+      name: 'Gemini 3.1 Pro',
+      provider: 'gemini',
+      description: 'Frontier reasoning and STEM model for deeply complex multi-step workflows.',
+      contextWindow: '2,000,000 tokens',
+      capabilities: ['reasoning', 'webSearch', 'codeExecution', 'vision', 'jsonMode'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      isPaid: true,
+      speed: 'Balanced',
+      intelligenceLevel: 'Maximum',
+    },
+  ],
+  openai: [
+    {
+      id: 'gpt-4o-mini',
+      name: 'GPT-4o Mini',
+      provider: 'openai',
+      description: 'Affordable, agile intelligence. Fast turnaround for standard inquiries and summaries.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['vision', 'codeExecution', 'jsonMode', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'High',
+    },
+    {
+      id: 'gpt-4o',
+      name: 'GPT-4o (Omni)',
+      provider: 'openai',
+      description: 'OpenAI flagship multimodal intelligence. Strongest general capability and vision.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['webSearch', 'codeExecution', 'vision', 'jsonMode', 'fastSpeed'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'Maximum',
+    },
+    {
+      id: 'o3-mini',
+      name: 'OpenAI o3-mini',
+      provider: 'openai',
+      description: 'Fast, high-efficiency STEM and coding reasoning model with adjustable thinking.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['reasoning', 'codeExecution', 'fastSpeed'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      speed: 'Balanced',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'o1',
+      name: 'OpenAI o1',
+      provider: 'openai',
+      description: 'Deep reasoning model designed to think thoroughly before answering complex questions.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['reasoning', 'codeExecution', 'vision'],
+      minPlanTier: 'pro',
+      supportedPlans: ['pro', 'enterprise'],
+      speed: 'Deep-Reasoning',
+      intelligenceLevel: 'Maximum',
+    },
+  ],
+  anthropic: [
+    {
+      id: 'claude-3-5-haiku-20241022',
+      name: 'Claude 3.5 Haiku',
+      provider: 'anthropic',
+      description: 'High velocity, responsive Claude model with precision instruction following.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['fastSpeed', 'jsonMode', 'codeExecution'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'High',
+    },
+    {
+      id: 'claude-3-7-sonnet-20250219',
+      name: 'Claude 3.7 Sonnet',
+      provider: 'anthropic',
+      description: 'Anthropic hybrid reasoning model. Combines instant response with extended thinking.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['reasoning', 'codeExecution', 'vision', 'jsonMode'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      speed: 'Balanced',
+      intelligenceLevel: 'Maximum',
+    },
+    {
+      id: 'claude-3-5-sonnet-20241022',
+      name: 'Claude 3.5 Sonnet',
+      provider: 'anthropic',
+      description: 'Superb coding capabilities, nuanced literary tone, and complex architectural analysis.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['codeExecution', 'vision', 'jsonMode'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'Maximum',
+    },
+  ],
+  groq: [
+    {
+      id: 'llama-3.3-70b-versatile',
+      name: 'Llama 3.3 70B (Versatile)',
+      provider: 'groq',
+      description: 'Meta 70B parameter frontier open model powered by Groq LPUs at ~300 tokens/sec.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['codeExecution', 'jsonMode', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'llama-3.1-8b-instant',
+      name: 'Llama 3.1 8B (Instant)',
+      provider: 'groq',
+      description: 'Instantaneous response rates (>700 tokens/second) for fast drafting and editing.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['fastSpeed', 'codeExecution'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Ultra-Fast',
+      intelligenceLevel: 'Standard',
+    },
+    {
+      id: 'deepseek-r1-distill-llama-70b',
+      name: 'DeepSeek R1 Distill (70B)',
+      provider: 'groq',
+      description: 'DeepSeek R1 reasoning architecture distilled into Llama 70B running at lightning speed.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['reasoning', 'codeExecution', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'Very High',
+    },
+  ],
+  deepseek: [
+    {
+      id: 'deepseek-chat',
+      name: 'DeepSeek V3 (Chat)',
+      provider: 'deepseek',
+      description: 'State-of-the-art 671B parameter MoE architecture with incredible coding and writing.',
+      contextWindow: '64,000 tokens',
+      capabilities: ['codeExecution', 'jsonMode', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Fast',
+      intelligenceLevel: 'Maximum',
+    },
+    {
+      id: 'deepseek-reasoner',
+      name: 'DeepSeek R1 (Reasoner)',
+      provider: 'deepseek',
+      description: 'Groundbreaking reinforcement-learning reasoning model with transparent chain-of-thought.',
+      contextWindow: '64,000 tokens',
+      capabilities: ['reasoning', 'codeExecution'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Deep-Reasoning',
+      intelligenceLevel: 'Maximum',
+    },
+  ],
+  mistral: [
+    {
+      id: 'mistral-large-latest',
+      name: 'Mistral Large 2',
+      provider: 'mistral',
+      description: 'Mistral top-tier frontier model with 128k context, strong multilingual skills & coding.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['codeExecution', 'jsonMode'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'codestral-latest',
+      name: 'Codestral 25.01',
+      provider: 'mistral',
+      description: 'Purpose-built for coding tasks, fill-in-the-middle, tests, and debugging in 80+ languages.',
+      contextWindow: '256,000 tokens',
+      capabilities: ['codeExecution', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'Very High',
+    },
+  ],
+  openrouter: [
+    {
+      id: 'meta-llama/llama-3.3-70b-instruct',
+      name: 'Llama 3.3 70B Instruct',
+      provider: 'openrouter',
+      description: 'Meta open model routed through top tier inference providers.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['codeExecution', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'Very High',
+    },
+    {
+      id: 'anthropic/claude-3.7-sonnet',
+      name: 'Claude 3.7 Sonnet (via OpenRouter)',
+      provider: 'openrouter',
+      description: 'Anthropic flagship through OpenRouter routing.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['reasoning', 'codeExecution', 'vision'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Balanced',
+      intelligenceLevel: 'Maximum',
+    },
+    {
+      id: 'deepseek/deepseek-r1',
+      name: 'DeepSeek R1 (OpenRouter)',
+      provider: 'openrouter',
+      description: 'Full unquantized DeepSeek R1 reasoning on OpenRouter.',
+      contextWindow: '160,000 tokens',
+      capabilities: ['reasoning', 'codeExecution'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      speed: 'Deep-Reasoning',
+      intelligenceLevel: 'Maximum',
+    },
+  ],
+  perplexity: [
+    {
+      id: 'sonar',
+      name: 'Sonar',
+      provider: 'perplexity',
+      description: 'Lightweight web grounded conversational search model.',
+      contextWindow: '128,000 tokens',
+      capabilities: ['webSearch', 'fastSpeed'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      speed: 'Fast',
+      intelligenceLevel: 'High',
+    },
+    {
+      id: 'sonar-pro',
+      name: 'Sonar Pro',
+      provider: 'perplexity',
+      description: 'Search-augmented frontier model with multi-query citation retrieval.',
+      contextWindow: '200,000 tokens',
+      capabilities: ['webSearch', 'reasoning'],
+      minPlanTier: 'tier1',
+      supportedPlans: ['tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Balanced',
+      intelligenceLevel: 'Very High',
+    },
+  ],
+  custom: [
+    {
+      id: 'default-custom-model',
+      name: 'Custom Endpoint Model',
+      provider: 'custom',
+      description: 'Target model served on your OpenAI-compatible endpoint (e.g. llama3, qwen2.5, mistral, etc.)',
+      contextWindow: 'Custom',
+      capabilities: ['codeExecution'],
+      minPlanTier: 'free',
+      supportedPlans: ['free', 'tier1', 'pro', 'enterprise'],
+      recommended: true,
+      speed: 'Balanced',
+      intelligenceLevel: 'High',
+    },
+  ],
+};
+
 const app = express();
+
+// Enable CORS for Google AI Studio shared links, preview environments, localhost, and custom domains
+app.use((req: Request, res: Response, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '25mb' }));
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -18,7 +383,7 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'online',
     appName: 'CreateAI',
-    hasGeminiEnvKey: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 5),
+    hasGeminiEnvKey: false,
     timestamp: Date.now(),
   });
 });
@@ -28,30 +393,16 @@ app.post('/api/validate-key', async (req: Request, res: Response) => {
   const { provider, apiKey, customBaseUrl } = req.body;
   const trimmedKey = (apiKey || '').trim();
 
-  if (!trimmedKey && provider !== 'gemini') {
-    return res.status(400).json({ valid: false, error: 'API key is required' });
+  if (!trimmedKey) {
+    return res.status(400).json({ valid: false, error: 'API key is required. Please provide your personal API key.' });
   }
 
   try {
     if (provider === 'gemini') {
-      const keyToUse = trimmedKey || process.env.GEMINI_API_KEY;
-      if (!keyToUse) {
-        return res.status(400).json({ valid: false, error: 'No Gemini API key provided or found in environment' });
-      }
-
-      if (!trimmedKey && process.env.GEMINI_API_KEY) {
-        return res.json({
-          valid: true,
-          message: 'Successfully validated Google Gemini API key from AI Studio environment!',
-          provider: 'gemini',
-          modelCount: (PROVIDER_MODELS.gemini || []).length,
-        });
-      }
-
       // Lightweight key validation: check models list instead of burning token generation quota
       try {
         const testRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToUse}&pageSize=1`
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${trimmedKey}&pageSize=1`
         );
         if (!testRes.ok) {
           const errData = await testRes.json().catch(() => ({}));
@@ -64,7 +415,6 @@ app.post('/api/validate-key', async (req: Request, res: Response) => {
           }
         }
       } catch (listErr: any) {
-        // Fallback check
         console.warn('[Gemini Validate Key] Network check failed:', listErr.message);
       }
 
@@ -350,7 +700,7 @@ app.post('/api/models', async (req: Request, res: Response) => {
     let accountMessage = '';
 
     if (provider === 'gemini') {
-      const keyToUse = trimmedKey || process.env.GEMINI_API_KEY;
+      const keyToUse = trimmedKey;
       if (keyToUse) {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToUse}`
@@ -684,11 +1034,11 @@ app.post('/api/generate-image', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Prompt is required for image generation.' });
     }
 
-    const keyToUse = (apiKey && typeof apiKey === 'string' && apiKey.trim()) || process.env.GEMINI_API_KEY;
+    const keyToUse = apiKey && typeof apiKey === 'string' && apiKey.trim();
     if (!keyToUse) {
       return res.status(400).json({
         success: false,
-        error: 'A Gemini API key is required for image generation. Please configure your key in Provider Settings.',
+        error: 'A personal Google Gemini API key is required for image generation. Please configure your key in Provider Settings.',
       });
     }
 
@@ -897,9 +1247,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
   try {
     if (provider === 'gemini') {
-      const keyToUse = trimmedKey || process.env.GEMINI_API_KEY;
+      const keyToUse = trimmedKey;
       if (!keyToUse) {
-        return sendError('No Gemini API key supplied or found in server environment. Please enter your key or configure GEMINI_API_KEY.');
+        return sendError('No Gemini API key supplied. Please configure your personal Google Gemini API key in Provider Settings.');
       }
 
       const ai = new GoogleGenAI({
@@ -1407,7 +1757,7 @@ async function performRagasEvaluation({
     }
   }
 
-  const keyToUse = apiKey || process.env.GEMINI_API_KEY;
+  const keyToUse = apiKey && typeof apiKey === 'string' && apiKey.trim();
   if (keyToUse) {
     try {
       const ai = new GoogleGenAI({
@@ -1774,6 +2124,18 @@ app.post('/api/external/ping', async (req: Request, res: Response) => {
   }
 });
 
+// Global error handling middleware
+app.use((err: any, req: Request, res: Response, next: any) => {
+  console.error('[CreateAI Server Error]:', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    status: err.status || 500,
+  });
+});
+
 // Configure Vite middleware in development or static serve in production
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
@@ -1800,21 +2162,3 @@ startServer().catch((err) => {
   console.error('[CreateAI] Failed to start server:', err);
   process.exit(1);
 });
-import cors from 'cors';
-
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://your-app.vercel.app' // Add your deployed Vercel domain
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Blocked by CORS'));
-    }
-  },
-  credentials: true
-}));

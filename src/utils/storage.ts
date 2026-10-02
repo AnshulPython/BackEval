@@ -79,24 +79,29 @@ export function saveUserAccounts(accounts: UserAccount[]): void {
   }
 }
 
-export function getCurrentUser(): UserAccount | null {
+export function getCurrentUser(): UserAccount {
   try {
     const activeId = localStorage.getItem(ACTIVE_USER_ID_KEY);
-    if (!activeId) {
-      // Default to Google user if available
-      const accounts = getUserAccounts();
-      const googleUser = accounts.find((a) => a.authProvider === 'google') || accounts[0];
-      if (googleUser) {
-        setCurrentUser(googleUser);
-        return googleUser;
-      }
-      return null;
-    }
     const accounts = getUserAccounts();
-    return accounts.find((a) => a.id === activeId) || null;
-  } catch {
-    return null;
-  }
+    if (activeId) {
+      const found = accounts.find((a) => a.id === activeId);
+      if (found) return found;
+    }
+    if (accounts.length > 0) {
+      return accounts[0];
+    }
+  } catch {}
+
+  return {
+    id: 'user_default',
+    email: 'user@orchestration.local',
+    displayName: 'User',
+    authProvider: 'email',
+    createdAt: Date.now(),
+    lastLoginAt: Date.now(),
+    apiKeys: getStoredApiKeys(),
+    savedModels: {},
+  };
 }
 
 export function setCurrentUser(user: UserAccount | null): void {
@@ -117,73 +122,6 @@ export function setCurrentUser(user: UserAccount | null): void {
   }
 }
 
-export function loginGoogleAccount(email: string, displayName?: string, avatarUrl?: string): UserAccount {
-  const accounts = getUserAccounts();
-  const cleanEmail = (email || PRIMARY_GOOGLE_USER_EMAIL).trim().toLowerCase();
-  let found = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-
-  if (!found) {
-    const name = displayName?.trim() || cleanEmail.split('@')[0] || 'Google User';
-    found = {
-      id: `user_google_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      email: cleanEmail,
-      displayName: name,
-      authProvider: 'google',
-      isGoogleVerified: true,
-      avatarUrl: avatarUrl || 'https://lh3.googleusercontent.com/a/default-user=s96-c',
-      createdAt: Date.now(),
-      lastLoginAt: Date.now(),
-      apiKeys: getStoredApiKeys(),
-      savedModels: {},
-    };
-    accounts.unshift(found);
-  } else {
-    found.authProvider = 'google';
-    found.isGoogleVerified = true;
-    found.lastLoginAt = Date.now();
-    if (displayName?.trim()) {
-      found.displayName = displayName.trim();
-    }
-    if (avatarUrl) {
-      found.avatarUrl = avatarUrl;
-    }
-  }
-
-  saveUserAccounts(accounts);
-  setCurrentUser(found);
-  return found;
-}
-
-export function loginAccount(email: string, displayName?: string): UserAccount {
-  const accounts = getUserAccounts();
-  const cleanEmail = email.trim().toLowerCase();
-  let found = accounts.find((a) => a.email.toLowerCase() === cleanEmail);
-
-  if (!found) {
-    const newName = displayName?.trim() || cleanEmail.split('@')[0] || 'User';
-    found = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      email: cleanEmail,
-      displayName: newName,
-      authProvider: 'email',
-      createdAt: Date.now(),
-      lastLoginAt: Date.now(),
-      apiKeys: {},
-      savedModels: {},
-    };
-    accounts.push(found);
-  } else {
-    found.lastLoginAt = Date.now();
-    if (displayName?.trim()) {
-      found.displayName = displayName.trim();
-    }
-  }
-
-  saveUserAccounts(accounts);
-  setCurrentUser(found);
-  return found;
-}
-
 export function updateAccountKeys(userId: string, keys: StoredAPIKeys): UserAccount | null {
   const accounts = getUserAccounts();
   const index = accounts.findIndex((a) => a.id === userId);
@@ -197,12 +135,6 @@ export function updateAccountKeys(userId: string, keys: StoredAPIKeys): UserAcco
     localStorage.setItem(KEYS_STORAGE_KEY, JSON.stringify(keys));
   }
   return accounts[index];
-}
-
-export function logoutCurrentUser(): void {
-  try {
-    localStorage.removeItem(ACTIVE_USER_ID_KEY);
-  } catch {}
 }
 
 export function getStoredApiKeys(): StoredAPIKeys {

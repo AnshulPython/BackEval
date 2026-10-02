@@ -129,43 +129,6 @@ export const ProviderSelectorModal: React.FC<ProviderSelectorModalProps> = ({
     }
   };
 
-  const handleUseBuiltInGemini = async () => {
-    setSelectedProvider('gemini');
-    setKeyInput('');
-    setIsValidating(true);
-    setValidationStatus(null);
-    try {
-      const response = await fetch('/api/validate-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ provider: 'gemini', apiKey: '' }),
-      });
-      const data = await response.json();
-      if (response.ok && data.valid) {
-        saveStoredApiKey('gemini', '');
-        setActiveProvider('gemini');
-        onProviderChanged('gemini');
-        try {
-          confetti({ particleCount: 70, spread: 50, origin: { y: 0.6 } });
-        } catch {}
-        setValidationStatus({
-          success: true,
-          message: 'Connected using Built-In Google Gemini Environment!',
-        });
-        setTimeout(() => onClose(), 1000);
-      } else {
-        setValidationStatus({
-          success: false,
-          message: data.error || 'Could not verify server Gemini key.',
-        });
-      }
-    } catch (err: any) {
-      setValidationStatus({ success: false, message: err.message });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
   const handleClearKey = () => {
     clearStoredApiKey(selectedProvider);
     setStoredKeys(getStoredApiKeys());
@@ -280,29 +243,6 @@ export const ProviderSelectorModal: React.FC<ProviderSelectorModalProps> = ({
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-
-              {selectedProvider === 'gemini' && hasGeminiEnvKey && (
-                <div className="p-3.5 rounded-xl bg-[#131314] border border-[#2d2f31] flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-4 h-4 text-[#8ab4f8] shrink-0" />
-                    <div>
-                      <div className="text-xs font-medium text-[#e3e3e3]">
-                        AI Studio Key Detected
-                      </div>
-                      <div className="text-[11px] text-[#8e918f]">
-                        Use the pre-configured Gemini environment.
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleUseBuiltInGemini}
-                    disabled={isValidating}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#8ab4f8] hover:bg-[#a8c7fa] text-[#131314] transition-colors shrink-0"
-                  >
-                    Use Built-in
-                  </button>
-                </div>
-              )}
 
               {selectedProvider === 'custom' && (
                 <div className="space-y-2">

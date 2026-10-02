@@ -25,9 +25,6 @@ import {
   getActiveSessionId,
   setActiveSessionId,
   getStoredApiKeys,
-  getCurrentUser,
-  setCurrentUser,
-  logoutCurrentUser,
   getProviderPlan,
   getFilterOnlyAvailableModels,
 } from './utils/storage';
@@ -39,9 +36,6 @@ import { ModelSelectorModal } from './components/ModelSelectorModal';
 import { CapabilitiesSettingsModal } from './components/CapabilitiesSettingsModal';
 import { SecretPromptModal } from './components/SecretPromptModal';
 import { RagasEvaluationModal } from './components/RagasEvaluationModal';
-import { LoginPage } from './components/LoginPage';
-import { AccountModal } from './components/AccountModal';
-import { GoogleSignInModal } from './components/GoogleSignInModal';
 import { VoiceSelectorPopover } from './components/VoiceSelectorPopover';
 import { speakMessage, getStoredVoiceConfig, saveStoredVoiceConfig } from './utils/speech';
 
@@ -62,11 +56,6 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [hasGeminiEnvKey, setHasGeminiEnvKey] = useState<boolean>(false);
 
-  // User Authentication State
-  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(() => getCurrentUser());
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
-
   // Voice State
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() =>
@@ -82,17 +71,6 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const handleLogout = () => {
-    logoutCurrentUser();
-    setCurrentUserState(null);
-  };
-
-  const handleSwitchAccount = (account: UserAccount) => {
-    setCurrentUser(account);
-    setCurrentUserState(account);
-    fetchAccountModels(provider);
-  };
 
   const fetchAccountModels = async (targetProvider: AIProviderId = provider) => {
     setIsRefreshingModels(true);
@@ -350,12 +328,27 @@ export default function App() {
 
       saveChatSessions(remaining);
       if (activeSessionId === id) {
-        setActiveSessionIdState(remaining[0].id);
-        setActiveSessionId(remaining[0].id);
+        const deletedIndex = prev.findIndex((s) => s.id === id);
+        const nextIndex = Math.min(Math.max(0, deletedIndex), remaining.length - 1);
+        const nextActive = remaining[nextIndex];
+        setActiveSessionIdState(nextActive.id);
+        setActiveSessionId(nextActive.id);
       }
       return remaining;
     });
   };
+
+  // Keyboard shortcut to toggle sidebar anywhere
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleAddImageMessage = (imageData: {
     url: string;
@@ -642,19 +635,6 @@ export default function App() {
     storedKeys[provider] || (provider === 'gemini' && hasGeminiEnvKey)
   );
 
-  // If user is not logged in, show the LoginPage
-  if (!currentUser) {
-    return (
-      <LoginPage
-        onLogin={(user) => {
-          setCurrentUserState(user);
-          fetchAccountModels(provider);
-        }}
-        hasGeminiEnvKey={hasGeminiEnvKey}
-      />
-    );
-  }
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#131314] font-sans text-[#e3e3e3] antialiased select-text">
       {/* Sidebar */}
@@ -682,9 +662,6 @@ export default function App() {
         onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
         onOpenRagasModal={() => setIsRagasModalOpen(true)}
         onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-        currentUser={currentUser}
-        onOpenAccountModal={() => setIsAccountModalOpen(true)}
-        onLogout={handleLogout}
         activeProvider={provider}
         activeModelId={modelId}
         isOpen={isSidebarOpen}
@@ -692,7 +669,7 @@ export default function App() {
       />
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 min-w-0 flex flex-col h-full min-h-0 overflow-hidden relative">
         <ChatArea
           messages={messages}
           currentSession={currentSession}
@@ -708,6 +685,7 @@ export default function App() {
           onOpenModelModal={() => setIsModelModalOpen(true)}
           onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
           isKeyConnected={isKeyConnected}
           accountChecked={accountChecked}
           totalAccountModels={totalAccountModels}
@@ -717,9 +695,6 @@ export default function App() {
           onSelectModel={handleModelSelected}
           onOpenSecretPromptModal={() => setIsSecretPromptModalOpen(true)}
           onOpenRagasModal={() => setIsRagasModalOpen(true)}
-          currentUser={currentUser}
-          onOpenAccountModal={() => setIsAccountModalOpen(true)}
-          onOpenGoogleSignIn={() => setIsGoogleModalOpen(true)}
           onAddImageMessage={handleAddImageMessage}
         />
       </main>
@@ -727,11 +702,7 @@ export default function App() {
       {/* Provider & API Key Modal */}
       <ProviderSelectorModal
         isOpen={isProviderModalOpen}
-        onClose={() => {
-          setIsProviderModalOpen(false);
-          const freshUser = getCurrentUser();
-          if (freshUser) setCurrentUserState(freshUser);
-        }}
+        onClose={() => setIsProviderModalOpen(false)}
         activeProvider={provider}
         onProviderChanged={handleProviderChanged}
         hasGeminiEnvKey={hasGeminiEnvKey}
@@ -786,32 +757,6 @@ export default function App() {
         onUpdateSessionMessages={handleUpdateSessionMessages}
         activeModelId={modelId}
         onImportSessions={handleImportSessions}
-      />
-
-      {/* Account & Connected API Keys Modal */}
-      {currentUser && (
-        <AccountModal
-          isOpen={isAccountModalOpen}
-          onClose={() => {
-            setIsAccountModalOpen(false);
-            const freshUser = getCurrentUser();
-            if (freshUser) setCurrentUserState(freshUser);
-          }}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onSwitchAccount={handleSwitchAccount}
-          hasGeminiEnvKey={hasGeminiEnvKey}
-        />
-      )}
-
-      {/* Google Sign In Modal */}
-      <GoogleSignInModal
-        isOpen={isGoogleModalOpen}
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={(acc) => {
-          setCurrentUserState(acc);
-          fetchAccountModels(provider);
-        }}
       />
 
       {/* Changeable Voice Popover */}
