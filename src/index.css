@@ -1,17 +1,58 @@
 @import "tailwindcss";
 
+:root {
+  color-scheme: dark;
+  --bg-app: #131314;
+  --bg-surface: #1e1f20;
+  --bg-hover: #282a2c;
+  --bg-hover-subtle: #202124;
+  --border-subtle: #2d2f31;
+  --border-strong: #444746;
+  --text-main: #e3e3e3;
+  --text-sub: #c4c7c5;
+  --text-muted: #8e918f;
+  --accent-primary: #8ab4f8;
+  --accent-hover: #aecbfa;
+  --user-bubble: #282a2c;
+  --user-text: #e3e3e3;
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.light, [data-theme="light"] {
+  color-scheme: light;
+  --bg-app: #f8f9fa;
+  --bg-surface: #ffffff;
+  --bg-hover: #f0f4f9;
+  --bg-hover-subtle: #f8fafd;
+  --border-subtle: #e1e3e1;
+  --border-strong: #dadce0;
+  --text-main: #1f1f1f;
+  --text-sub: #444746;
+  --text-muted: #5e5e5e;
+  --accent-primary: #1a73e8;
+  --accent-hover: #0b57d0;
+  --user-bubble: #e8f0fe;
+  --user-text: #1f1f1f;
+}
+
 html, body, #root {
   height: 100%;
   height: 100dvh;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #131314;
-  color: #e3e3e3;
+  background-color: var(--bg-app);
+  color: var(--text-main);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Minimalist scrollbar */
+/* Touch manipulation on mobile */
+button, input, textarea, a {
+  touch-action: manipulation;
+}
+
+/* Minimalist scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -26,3 +67,172 @@ html, body, #root {
 ::-webkit-scrollbar-thumb:hover {
   background: #444746;
 }
+
+.light ::-webkit-scrollbar-thumb {
+  background: #dadce0;
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}
+
+/* Light mode overrides for existing Tailwind utility classes */
+.light html, .light body, .light #root {
+  background-color: #f8f9fa !important;
+  color: #1f1f1f !important;
+}
+
+.light .bg-\[\#131314\] {
+  background-color: #f8f9fa !important;
+}
+
+.light .bg-\[\#1e1f20\] {
+  background-color: #ffffff !important;
+}
+
+.light .bg-\[\#282a2c\] {
+  background-color: #f0f4f9 !important;
+}
+
+.light .bg-\[\#202124\] {
+  background-color: #f8fafd !important;
+}
+
+.light .bg-\[\#333538\] {
+  background-color: #e3e8f0 !important;
+}
+
+.light .bg-\[\#3c4043\] {
+  background-color: #dadce0 !important;
+}
+
+.light .hover\:bg-\[\#282a2c\]:hover {
+  background-color: #f0f4f9 !important;
+}
+
+.light .hover\:bg-\[\#333538\]:hover {
+  background-color: #e3e8f0 !important;
+}
+
+.light .hover\:bg-\[\#202124\]:hover {
+  background-color: #f8fafd !important;
+}
+
+.light .hover\:bg-\[\#282a2c\]\/50:hover,
+.light .hover\:bg-\[\#282a2c\]\/60:hover {
+  background-color: rgba(240, 244, 249, 0.85) !important;
+}
+
+.light .border-\[\#2d2f31\],
+.light .border-\[\#2d2f31\]\/80 {
+  border-color: #e1e3e1 !important;
+}
+
+.light .border-\[\#37393b\],
+.light .border-\[\#3c4043\],
+.light .border-\[\#444746\] {
+  border-color: #dadce0 !important;
+}
+
+.light .text-\[\#e3e3e3\] {
+  color: #1f1f1f !important;
+}
+
+.light .text-\[\#c4c7c5\] {
+  color: #444746 !important;
+}
+
+.light .text-\[\#8e918f\] {
+  color: #5e5e5e !important;
+}
+
+.light .text-\[\#8ab4f8\] {
+  color: #1a73e8 !important;
+}
+
+.light .text-white:not(.btn-keep-white) {
+  color: #1f1f1f !important;
+}
+
+.light .placeholder-\[\#8e918f\]::placeholder {
+  color: #747775 !important;
+}
+
+/* Light mode specific element adaptations */
+.light .theme-footer-gradient {
+  background: linear-gradient(to top, #f8f9fa 65%, rgba(248, 249, 250, 0.95) 85%, transparent 100%) !important;
+}
+
+.light .theme-prompt-form {
+  background-color: #ffffff !important;
+  border-color: #dadce0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+}
+
+.light .theme-prompt-form:focus-within {
+  background-color: #ffffff !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 4px 24px rgba(26, 115, 232, 0.16) !important;
+}
+
+.light .theme-user-bubble {
+  background-color: #e8f0fe !important;
+  color: #1f1f1f !important;
+  border: 1px solid #d2e3fc !important;
+}
+
+.light .theme-user-bubble .text-\[\#e3e3e3\],
+.light .theme-user-bubble .text-white {
+  color: #1f1f1f !important;
+}
+
+.light .theme-send-button {
+  background-color: #1a73e8 !important;
+  color: #ffffff !important;
+}
+
+.light .theme-send-button:hover {
+  background-color: #1557b0 !important;
+}
+
+.light .theme-send-disabled {
+  background-color: #f0f4f9 !important;
+  color: #747775 !important;
+  opacity: 0.6 !important;
+}
+
+.light .theme-code-block {
+  background-color: #f8f9fa !important;
+  border-color: #e1e3e1 !important;
+}
+
+.light .theme-code-header {
+  background-color: #f0f4f9 !important;
+  border-color: #e1e3e1 !important;
+}
+
+.light .theme-code-body {
+  background-color: #ffffff !important;
+  color: #1f1f1f !important;
+}
+
+.light pre code {
+  color: #1f1f1f !important;
+}
+
+.light input[type="text"],
+.light input[type="password"],
+.light textarea {
+  color: #1f1f1f !important;
+}
+
+/* Android bottom button safe area and elevation */
+.android-footer-safe {
+  padding-bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem));
+}
+
+@media (max-width: 640px) {
+  .android-footer-safe {
+    padding-bottom: max(1.25rem, calc(env(safe-area-inset-bottom, 0px) + 1rem));
+  }
+}
+

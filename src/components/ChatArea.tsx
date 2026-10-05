@@ -42,6 +42,8 @@ import {
   FileJson,
   ImageIcon,
   Maximize2,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   AIModel,
@@ -51,6 +53,7 @@ import {
   ChatSession,
   ModelCapabilitiesConfig,
   VoiceConfig,
+  ThemeMode,
 } from '../types';
 import { AI_PROVIDERS } from '../data/providersAndModels';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -104,6 +107,10 @@ interface ChatAreaProps {
     aspectRatio: string;
     modelUsed: string;
   }) => void;
+  theme?: ThemeMode;
+  actualTheme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
+  onThemeChange?: (theme: ThemeMode) => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -127,6 +134,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onOpenSecretPromptModal,
   onOpenRagasModal,
   onAddImageMessage,
+  theme = 'dark',
+  actualTheme = 'dark',
+  onToggleTheme,
+  onThemeChange,
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
@@ -324,7 +335,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             name: file.name,
             mimeType: file.type || 'application/octet-stream',
             dataUrl: isImage ? result : undefined,
-            textPreview: !isImage ? result.slice(0, 500) : undefined,
+            textPreview: !isImage ? result : undefined,
+            textContent: !isImage ? result : undefined,
             size: file.size,
           },
         ]);
@@ -539,10 +551,27 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             )}
           </div>
 
+          {/* Quick Theme Toggle (Light / Dark Mode) */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-[#e3e3e3] border border-[#2d2f31] transition-all cursor-pointer touch-manipulation active:scale-95 shrink-0"
+              title={`Switch to ${actualTheme === 'dark' ? 'Light' : 'Dark'} mode`}
+              aria-label="Toggle light or dark theme"
+            >
+              {actualTheme === 'dark' ? (
+                <Sun className="w-4 h-4 text-[#f9ab00] transition-transform hover:rotate-45" />
+              ) : (
+                <Moon className="w-4 h-4 text-[#1a73e8] transition-transform hover:-rotate-12" />
+              )}
+            </button>
+          )}
+
           {/* API Keys Configuration Button */}
           <button
             onClick={onOpenProviderModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs font-medium text-[#e3e3e3] border border-[#2d2f31] transition-colors ml-0.5 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs font-medium text-[#e3e3e3] border border-[#2d2f31] transition-colors ml-0.5 cursor-pointer touch-manipulation active:scale-95"
             title="Configure Providers & API Keys"
           >
             <Key className="w-3.5 h-3.5 text-[#8ab4f8]" />
@@ -562,7 +591,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* Message Stream */}
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-6 pb-48 sm:pb-40 space-y-6">
         {/* Welcome Empty State */}
         {messages.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto py-12 px-4 text-center">
@@ -737,7 +766,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <div
                   className={`text-left leading-relaxed ${
                     isUser
-                      ? 'bg-[#282a2c] text-[#e3e3e3] rounded-[22px] px-5 py-3 text-[14.5px]'
+                      ? 'theme-user-bubble bg-[#282a2c] text-[#e3e3e3] rounded-[22px] px-5 py-3 text-[14.5px]'
                       : 'w-full text-[#e3e3e3] text-[15px]'
                   }`}
                 >
@@ -1054,8 +1083,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Floating Gemini Input Container */}
-      <footer className="shrink-0 z-20 p-3 sm:pb-5 bg-gradient-to-t from-[#131314] via-[#131314]/95 to-transparent">
+      {/* Floating Gemini Input Container with Android Bottom Safe Area */}
+      <footer className="shrink-0 z-20 px-3 pt-2 android-footer-safe bg-gradient-to-t from-[#131314] via-[#131314]/95 to-transparent theme-footer-gradient select-none">
         <div className="max-w-3xl mx-auto space-y-2">
           {showToolsBar && (
             <div className="p-2 rounded-2xl bg-[#1e1f20] border border-[#2d2f31] mb-2">
@@ -1109,7 +1138,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           {/* The Iconic Gemini Prompt Box */}
           <form
             onSubmit={handleSubmit}
-            className="relative flex flex-col bg-[#1e1f20] border border-[#2d2f31] rounded-[28px] p-3 shadow-lg focus-within:border-[#444746] focus-within:bg-[#202124] transition-all"
+            className="relative flex flex-col bg-[#1e1f20] border border-[#2d2f31] rounded-[28px] p-3 shadow-lg focus-within:border-[#444746] focus-within:bg-[#202124] transition-all theme-prompt-form"
           >
             <textarea
               ref={textareaRef}
@@ -1121,8 +1150,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               className="w-full bg-transparent text-sm text-[#e3e3e3] placeholder-[#8e918f] focus:outline-none resize-none py-1.5 px-2 max-h-[180px] leading-relaxed"
             />
 
-            <div className="flex items-center justify-between pt-1">
-              <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between pt-1 gap-2">
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1134,7 +1163,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-[#8e918f] hover:text-[#e3e3e3] rounded-full hover:bg-[#282a2c] transition-colors"
+                  className="min-h-[40px] min-w-[40px] flex items-center justify-center p-2 text-[#8e918f] hover:text-[#e3e3e3] rounded-full hover:bg-[#282a2c] active:scale-95 touch-manipulation transition-all"
                   title="Add attachment"
                 >
                   <Paperclip className="w-4 h-4" />
@@ -1142,7 +1171,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsImageModalOpen(true)}
-                  className="p-2 text-[#8e918f] hover:text-[#c58af9] rounded-full hover:bg-[#282a2c] transition-colors cursor-pointer"
+                  className="min-h-[40px] min-w-[40px] flex items-center justify-center p-2 text-[#8e918f] hover:text-[#c58af9] rounded-full hover:bg-[#282a2c] active:scale-95 touch-manipulation transition-all cursor-pointer"
                   title="Generate Image with AI (/image prompt)"
                 >
                   <ImageIcon className="w-4 h-4 text-[#c58af9]" />
@@ -1155,7 +1184,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       webSearch: !capabilities.webSearch,
                     })
                   }
-                  className={`p-2 rounded-full transition-colors ${
+                  className={`min-h-[40px] min-w-[40px] flex items-center justify-center p-2 rounded-full active:scale-95 touch-manipulation transition-all ${
                     capabilities.webSearch
                       ? 'text-[#8ab4f8] bg-[#282a2c]'
                       : 'text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#282a2c]'
@@ -1172,7 +1201,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       reasoning: !capabilities.reasoning,
                     })
                   }
-                  className={`p-2 rounded-full transition-colors ${
+                  className={`min-h-[40px] min-w-[40px] flex items-center justify-center p-2 rounded-full active:scale-95 touch-manipulation transition-all ${
                     capabilities.reasoning
                       ? 'text-[#8ab4f8] bg-[#282a2c]'
                       : 'text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#282a2c]'
@@ -1184,7 +1213,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsVoicePopoverOpen(true)}
-                  className="p-2 rounded-full text-[#8e918f] hover:text-[#8ab4f8] hover:bg-[#282a2c] transition-colors"
+                  className="min-h-[40px] min-w-[40px] flex items-center justify-center p-2 rounded-full text-[#8e918f] hover:text-[#8ab4f8] hover:bg-[#282a2c] active:scale-95 touch-manipulation transition-all"
                   title="Change voice settings"
                 >
                   <Mic className="w-4 h-4" />
@@ -1192,7 +1221,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowToolsBar(!showToolsBar)}
-                  className={`p-2 rounded-full transition-colors ${
+                  className={`min-h-[40px] min-w-[40px] flex items-center justify-center p-2 rounded-full active:scale-95 touch-manipulation transition-all ${
                     showToolsBar
                       ? 'text-[#8ab4f8] bg-[#282a2c]'
                       : 'text-[#8e918f] hover:text-[#e3e3e3] hover:bg-[#282a2c]'
@@ -1207,7 +1236,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="button"
                   onClick={onStopStreaming}
-                  className="w-9 h-9 rounded-full bg-[#e3e3e3] text-[#131314] flex items-center justify-center transition-colors shadow hover:bg-white"
+                  className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-[#e3e3e3] text-[#131314] theme-send-button flex items-center justify-center transition-all shadow hover:bg-white touch-manipulation active:scale-95 shrink-0"
                   title="Stop"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
@@ -1216,10 +1245,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                 <button
                   type="submit"
                   disabled={!input.trim() && attachments.length === 0}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                  className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all touch-manipulation active:scale-95 shrink-0 ${
                     input.trim() || attachments.length > 0
-                      ? 'bg-[#e3e3e3] text-[#131314] hover:bg-white cursor-pointer shadow-sm'
-                      : 'bg-[#282a2c] text-[#8e918f] opacity-40 cursor-not-allowed'
+                      ? 'bg-[#e3e3e3] text-[#131314] theme-send-button hover:bg-white cursor-pointer shadow-sm'
+                      : 'bg-[#282a2c] text-[#8e918f] theme-send-disabled opacity-40 cursor-not-allowed'
                   }`}
                   title="Send"
                 >
@@ -1229,7 +1258,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             </div>
           </form>
 
-          <div className="text-center text-[11px] text-[#8e918f] pt-1">
+          <div className="text-center text-[10.5px] sm:text-[11px] text-[#8e918f] pt-0.5 pb-0.5 select-none">
             AI responses may be inaccurate. Double-check important info.
           </div>
         </div>

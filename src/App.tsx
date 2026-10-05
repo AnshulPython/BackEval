@@ -12,6 +12,7 @@ import {
   ModelCapabilitiesConfig,
   UserAccount,
   VoiceConfig,
+  ThemeMode,
 } from './types';
 import {
   getActiveProvider,
@@ -27,6 +28,10 @@ import {
   getStoredApiKeys,
   getProviderPlan,
   getFilterOnlyAvailableModels,
+  getStoredTheme,
+  saveStoredTheme,
+  applyThemeToDocument,
+  resolveActualTheme,
 } from './utils/storage';
 import { PROVIDER_MODELS } from './data/providersAndModels';
 import { Sidebar } from './components/Sidebar';
@@ -68,9 +73,43 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [isSecretPromptModalOpen, setIsSecretPromptModalOpen] = useState<boolean>(false);
   const [isRagasModalOpen, setIsRagasModalOpen] = useState<boolean>(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : false
+  );
+
+  // Theme State
+  const [theme, setThemeState] = useState<ThemeMode>(() => getStoredTheme());
+  const [actualTheme, setActualTheme] = useState<'dark' | 'light'>(() =>
+    resolveActualTheme(getStoredTheme())
+  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const actual = applyThemeToDocument(theme);
+    setActualTheme(actual);
+
+    if (theme === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+      const media = window.matchMedia('(prefers-color-scheme: light)');
+      const listener = () => {
+        const updated = applyThemeToDocument('system');
+        setActualTheme(updated);
+      };
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+  }, [theme]);
+
+  const handleThemeChange = (newTheme: ThemeMode) => {
+    setThemeState(newTheme);
+    saveStoredTheme(newTheme);
+    setActualTheme(applyThemeToDocument(newTheme));
+  };
+
+  const handleToggleTheme = () => {
+    const next: ThemeMode = actualTheme === 'dark' ? 'light' : 'dark';
+    handleThemeChange(next);
+  };
 
   const fetchAccountModels = async (targetProvider: AIProviderId = provider) => {
     setIsRefreshingModels(true);

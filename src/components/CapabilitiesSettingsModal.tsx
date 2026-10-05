@@ -15,8 +15,11 @@ import {
   RotateCcw,
   Lock,
   Mic,
+  Sun,
+  Moon,
+  Laptop,
 } from 'lucide-react';
-import { ModelCapabilitiesConfig } from '../types';
+import { ModelCapabilitiesConfig, ThemeMode } from '../types';
 import { DEFAULT_CAPABILITIES, SYSTEM_PRESETS } from '../data/providersAndModels';
 
 interface CapabilitiesSettingsModalProps {
@@ -27,6 +30,8 @@ interface CapabilitiesSettingsModalProps {
   activeModelId: string;
   onOpenSecretPrompt?: () => void;
   onOpenVoiceModal?: () => void;
+  theme?: ThemeMode;
+  onThemeChange?: (theme: ThemeMode) => void;
 }
 
 export const CapabilitiesSettingsModal: React.FC<CapabilitiesSettingsModalProps> = ({
@@ -37,6 +42,8 @@ export const CapabilitiesSettingsModal: React.FC<CapabilitiesSettingsModalProps>
   activeModelId,
   onOpenSecretPrompt,
   onOpenVoiceModal,
+  theme = 'dark',
+  onThemeChange,
 }) => {
   if (!isOpen) return null;
 
@@ -96,7 +103,53 @@ export const CapabilitiesSettingsModal: React.FC<CapabilitiesSettingsModalProps>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {/* SECTION 0: Appearance & Theme */}
+          <div className="space-y-3">
+            <div className="text-xs font-medium uppercase tracking-wider text-[#8e918f]">
+              Appearance & Theme
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              {[
+                { id: 'light' as ThemeMode, name: 'Light Mode', icon: Sun, desc: 'High-contrast day' },
+                { id: 'dark' as ThemeMode, name: 'Dark Mode', icon: Moon, desc: 'OLED pitch dark' },
+                { id: 'system' as ThemeMode, name: 'System', icon: Laptop, desc: 'Follow device OS' },
+              ].map((t) => {
+                const isSelected = theme === t.id;
+                const IconComp = t.icon;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => onThemeChange?.(t.id)}
+                    className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer touch-manipulation active:scale-[0.98] ${
+                      isSelected
+                        ? 'bg-[#282a2c] border-[#8ab4f8] shadow-md shadow-[#8ab4f8]/5 ring-1 ring-[#8ab4f8]/30'
+                        : 'bg-[#131314] hover:bg-[#282a2c]/50 border-[#2d2f31] text-[#8e918f]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-[#8ab4f8]/20 text-[#8ab4f8]' : 'bg-[#1e1f20] text-[#8e918f]'}`}>
+                        <IconComp className="w-4 h-4" />
+                      </div>
+                      <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${isSelected ? 'border-[#8ab4f8] bg-[#8ab4f8]' : 'border-[#444746]'}`}>
+                        {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                    <div>
+                      <div className={`text-xs font-medium leading-tight ${isSelected ? 'text-[#e3e3e3]' : 'text-[#c4c7c5]'}`}>
+                        {t.name}
+                      </div>
+                      <div className="text-[10px] text-[#8e918f] mt-0.5 hidden sm:block">
+                        {t.desc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* SECTION 1: Capabilities */}
           <div className="space-y-3">
             <div className="text-xs font-medium uppercase tracking-wider text-[#8e918f]">
@@ -326,10 +379,10 @@ export const CapabilitiesSettingsModal: React.FC<CapabilitiesSettingsModalProps>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#2d2f31] flex justify-end">
+        <div className="px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] border-t border-[#2d2f31] flex justify-end shrink-0 bg-[#1e1f20]">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-full bg-[#e3e3e3] hover:bg-white text-[#131314] font-medium text-xs transition-colors"
+            className="px-5 py-2 rounded-full bg-[#e3e3e3] hover:bg-white text-[#131314] font-medium text-xs transition-colors cursor-pointer touch-manipulation active:scale-95"
           >
             Done
           </button>

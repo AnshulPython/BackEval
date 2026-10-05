@@ -24,8 +24,10 @@ import {
   FileJson,
   AlertTriangle,
   PanelLeftClose,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { ChatSession, AIProviderId, UserAccount } from '../types';
+import { ChatSession, AIProviderId, UserAccount, ThemeMode } from '../types';
 import { AI_PROVIDERS } from '../data/providersAndModels';
 import {
   exportChatMarkdown,
@@ -49,6 +51,9 @@ interface SidebarProps {
   activeModelId: string;
   isOpen: boolean;
   onToggleOpen: () => void;
+  theme?: ThemeMode;
+  actualTheme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -66,6 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeModelId,
   isOpen,
   onToggleOpen,
+  theme = 'dark',
+  actualTheme = 'dark',
+  onToggleTheme,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -203,9 +211,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden animate-in fade-in duration-200"
+          onClick={onToggleOpen}
+          aria-hidden="true"
+        />
+      )}
       <aside
-        className={`h-full min-h-0 bg-[#1e1f20] border-r border-[#2d2f31] flex flex-col transition-[width] duration-200 shrink-0 select-none overflow-hidden relative z-10 ${
-          isOpen ? 'w-64' : 'w-0 border-r-0'
+        className={`h-full min-h-0 bg-[#1e1f20] border-r border-[#2d2f31] flex flex-col transition-all duration-200 shrink-0 select-none overflow-hidden ${
+          isOpen
+            ? 'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-2xl md:relative md:w-64 md:z-10 md:shadow-none'
+            : 'w-0 border-r-0 pointer-events-none md:pointer-events-auto'
         }`}
       >
         {/* Header / Brand */}
@@ -245,8 +263,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* New Chat Button */}
         <div className="px-3 pb-2.5 shrink-0">
           <button
-            onClick={onNewChat}
-            className="w-full flex items-center gap-2.5 py-2 px-3.5 bg-[#1e1f20] hover:bg-[#282a2c] border border-[#2d2f31]/80 text-[#e3e3e3] font-medium text-xs rounded-xl transition-colors group cursor-pointer"
+            onClick={() => {
+              onNewChat();
+              if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                onToggleOpen();
+              }
+            }}
+            className="w-full flex items-center gap-2.5 py-2 px-3.5 bg-[#1e1f20] hover:bg-[#282a2c] border border-[#2d2f31]/80 text-[#e3e3e3] font-medium text-xs rounded-xl transition-colors group cursor-pointer touch-manipulation active:scale-[0.98]"
           >
             <Plus className="w-4 h-4 text-[#8ab4f8]" />
             <span>New chat</span>
@@ -293,8 +316,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div key={session.id} className="relative">
                 {/* Regular Chat Row */}
                 <div
-                  onClick={() => onSelectSession(session.id)}
-                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${
+                  onClick={() => {
+                    onSelectSession(session.id);
+                    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                      onToggleOpen();
+                    }
+                  }}
+                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors touch-manipulation active:scale-[0.99] ${
                     isActive
                       ? 'bg-[#282a2c] text-[#ffffff] font-medium'
                       : 'text-[#c4c7c5] hover:bg-[#282a2c]/60 hover:text-[#e3e3e3]'
@@ -571,12 +599,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Footer Navigation */}
-        <div className="p-3 border-t border-[#2d2f31] bg-[#1e1f20] space-y-1.5 text-xs shrink-0">
+        <div className="p-3 pb-[max(0.75rem,calc(env(safe-area-inset-bottom,0px)+0.5rem))] border-t border-[#2d2f31] bg-[#1e1f20] space-y-1 text-xs shrink-0">
+          {/* Theme Mode Toggle Button in Sidebar */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation active:scale-[0.98]"
+              title={`Switch to ${actualTheme === 'dark' ? 'Light' : 'Dark'} mode`}
+            >
+              <div className="flex items-center gap-2.5">
+                {actualTheme === 'dark' ? (
+                  <Sun className="w-3.5 h-3.5 text-[#f9ab00]" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-[#1a73e8]" />
+                )}
+                <span>Appearance</span>
+              </div>
+              <span className="text-[11px] font-medium text-[#8e918f] capitalize">
+                {actualTheme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+              </span>
+            </button>
+          )}
+
           {/* Change Voice Button in Sidebar */}
           {onOpenVoiceModal && (
             <button
               onClick={onOpenVoiceModal}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation"
               title="Change speech synthesis voice and pitch"
             >
               <Volume2 className="w-3.5 h-3.5 text-[#8ab4f8]" />
@@ -587,7 +636,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Active Model / Provider Summary */}
           <button
             onClick={onOpenProviderModal}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation"
           >
             <div className="flex items-center gap-2 truncate">
               <Key className="w-3.5 h-3.5 text-[#8e918f]" />
@@ -602,7 +651,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {onOpenRagasModal && (
             <button
               onClick={onOpenRagasModal}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-[#8e918f]" />
               <span>Ragas & Evaluation</span>
@@ -612,7 +661,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Settings Button */}
           <button
             onClick={onOpenSettingsModal}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation"
           >
             <Sliders className="w-3.5 h-3.5 text-[#8e918f]" />
             <span>Settings</span>

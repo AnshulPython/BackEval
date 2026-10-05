@@ -2,7 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#131314" id="theme-color-meta" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem('createai_theme_mode_v2');
+          var isLight = mode === 'light' || (mode === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+          if (isLight) {
+            document.documentElement.classList.add('light');
+            document.documentElement.setAttribute('data-theme', 'light');
+            var meta = document.getElementById('theme-color-meta');
+            if (meta) meta.setAttribute('content', '#f8f9fa');
+          } else {
+            document.documentElement.classList.add('dark');
+            document.documentElement.setAttribute('data-theme', 'dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <title>Multi-Provider LLM Orchestration &amp; RAGAS Benchmarking Engine</title>
     <meta name="description" content="Unified multi-provider LLM orchestration platform with real-time model switching, automated RAGAS evaluation benchmarking, custom prompt injection defense, and multilingual voice synthesis." />
     <meta property="og:title" content="Multi-Provider LLM Orchestration &amp; RAGAS Benchmarking Engine" />

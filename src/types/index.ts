@@ -1,3 +1,5 @@
+export type ThemeMode = 'dark' | 'light' | 'system';
+
 export type AIProviderId =
   | 'gemini'
   | 'openai'
@@ -98,6 +100,7 @@ export interface ChatAttachment {
   mimeType: string;
   dataUrl?: string; // base64 data url
   textPreview?: string;
+  textContent?: string;
   size?: number;
 }
 

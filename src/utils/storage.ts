@@ -13,9 +13,11 @@ import {
   RagasBenchmarkReport,
   UserAccount,
   VoiceConfig,
+  ThemeMode,
 } from '../types/index';
 import { DEFAULT_CAPABILITIES, DEFAULT_VOICE_CONFIG } from '../data/providersAndModels';
 
+const THEME_STORAGE_KEY = 'createai_theme_mode_v2';
 const KEYS_STORAGE_KEY = 'createai_api_keys_v1';
 const PROVIDER_STORAGE_KEY = 'createai_active_provider_v1';
 const MODEL_STORAGE_KEY = 'createai_active_model_v1';
@@ -407,4 +409,52 @@ export function saveRagasReports(reports: RagasBenchmarkReport[]): void {
   try {
     localStorage.setItem(RAGAS_REPORTS_KEY, JSON.stringify(reports));
   } catch {}
+}
+
+export function getStoredTheme(): ThemeMode {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY);
+    if (raw === 'light' || raw === 'dark' || raw === 'system') {
+      return raw;
+    }
+  } catch {}
+  return 'dark';
+}
+
+export function resolveActualTheme(mode: ThemeMode): 'dark' | 'light' {
+  if (mode === 'system') {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    }
+    return 'dark';
+  }
+  return mode;
+}
+
+export function applyThemeToDocument(mode: ThemeMode): 'dark' | 'light' {
+  const actual = resolveActualTheme(mode);
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    if (actual === 'light') {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
+      const meta = document.getElementById('theme-color-meta');
+      if (meta) meta.setAttribute('content', '#f8f9fa');
+    } else {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      root.setAttribute('data-theme', 'dark');
+      const meta = document.getElementById('theme-color-meta');
+      if (meta) meta.setAttribute('content', '#131314');
+    }
+  }
+  return actual;
+}
+
+export function saveStoredTheme(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, mode);
+  } catch {}
+  applyThemeToDocument(mode);
 }

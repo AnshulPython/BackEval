@@ -1356,6 +1356,32 @@ app.post('/api/chat', async (req: Request, res: Response) => {
                   },
                 });
               }
+            } else {
+              // Inject full text attachment directly into Gemini prompt parts
+              // Preserves full content rather than truncating to 500 characters
+              let fullText = '';
+              if (typeof att.textContent === 'string' && att.textContent.length > 0) {
+                fullText = att.textContent;
+              } else if (typeof att.content === 'string' && att.content.length > 0) {
+                fullText = att.content;
+              } else if (typeof att.text === 'string' && att.text.length > 0) {
+                fullText = att.text;
+              } else if (typeof att.textPreview === 'string' && att.textPreview.length > 0) {
+                fullText = att.textPreview;
+              } else if (att.dataUrl && (att.type === 'text' || !att.mimeType || att.mimeType.startsWith('text/') || att.mimeType.includes('json') || att.mimeType.includes('javascript') || att.mimeType.includes('xml'))) {
+                const matches = att.dataUrl.match(/^data:[^;]+;base64,(.+)$/);
+                if (matches) {
+                  try {
+                    fullText = Buffer.from(matches[1], 'base64').toString('utf-8');
+                  } catch {}
+                }
+              }
+
+              if (fullText) {
+                parts.push({
+                  text: `[Attached File: ${att.name || 'document.txt'}]\n${fullText}`,
+                });
+              }
             }
           }
         }
@@ -1555,6 +1581,31 @@ app.post('/api/chat', async (req: Request, res: Response) => {
                   },
                 });
               }
+            } else {
+              let fullText = '';
+              if (typeof att.textContent === 'string' && att.textContent.length > 0) {
+                fullText = att.textContent;
+              } else if (typeof att.content === 'string' && att.content.length > 0) {
+                fullText = att.content;
+              } else if (typeof att.text === 'string' && att.text.length > 0) {
+                fullText = att.text;
+              } else if (typeof att.textPreview === 'string' && att.textPreview.length > 0) {
+                fullText = att.textPreview;
+              } else if (att.dataUrl && (att.type === 'text' || !att.mimeType || att.mimeType.startsWith('text/') || att.mimeType.includes('json') || att.mimeType.includes('javascript') || att.mimeType.includes('xml'))) {
+                const matches = att.dataUrl.match(/^data:[^;]+;base64,(.+)$/);
+                if (matches) {
+                  try {
+                    fullText = Buffer.from(matches[1], 'base64').toString('utf-8');
+                  } catch {}
+                }
+              }
+
+              if (fullText) {
+                contentParts.push({
+                  type: 'text',
+                  text: `[Attached File: ${att.name || 'document.txt'}]\n${fullText}`,
+                });
+              }
             }
           }
         }
@@ -1700,6 +1751,31 @@ app.post('/api/chat', async (req: Request, res: Response) => {
               type: 'image_url',
               image_url: { url: att.dataUrl },
             });
+          } else {
+            let fullText = '';
+            if (typeof att.textContent === 'string' && att.textContent.length > 0) {
+              fullText = att.textContent;
+            } else if (typeof att.content === 'string' && att.content.length > 0) {
+              fullText = att.content;
+            } else if (typeof att.text === 'string' && att.text.length > 0) {
+              fullText = att.text;
+            } else if (typeof att.textPreview === 'string' && att.textPreview.length > 0) {
+              fullText = att.textPreview;
+            } else if (att.dataUrl && (att.type === 'text' || !att.mimeType || att.mimeType.startsWith('text/') || att.mimeType.includes('json') || att.mimeType.includes('javascript') || att.mimeType.includes('xml'))) {
+              const matches = att.dataUrl.match(/^data:[^;]+;base64,(.+)$/);
+              if (matches) {
+                try {
+                  fullText = Buffer.from(matches[1], 'base64').toString('utf-8');
+                } catch {}
+              }
+            }
+
+            if (fullText) {
+              parts.push({
+                type: 'text',
+                text: `[Attached File: ${att.name || 'document.txt'}]\n${fullText}`,
+              });
+            }
           }
         }
         parts.push({ type: 'text', text: textContent });
