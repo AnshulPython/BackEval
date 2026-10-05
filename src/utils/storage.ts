@@ -297,11 +297,10 @@ export function setActiveSessionId(id: string): void {
   } catch {}
 }
 
-export const DEFAULT_LIVE_RENDER_BACKEND_URL =
-  'https://dashboard.render.com/web/srv-daum9h67bikc73cur3tg/deploys/dep-daum9he7bikc73cur5u0?r=2026-09-30%4019%3A35%3A37%7E2026-09-30%4019%3A38%3A03';
+export const DEFAULT_LIVE_RENDER_BACKEND_URL = 'https://createai-vepb.onrender.com';
 
-export const LIVE_RENDER_SERVICE_ID = 'srv-daum9h67bikc73cur3tg';
-export const LIVE_RENDER_DEPLOY_ID = 'dep-daum9he7bikc73cur5u0';
+export const LIVE_RENDER_SERVICE_ID = 'createai-vepb';
+export const LIVE_RENDER_DEPLOY_ID = 'live';
 
 const EXTERNAL_CONFIG_KEY = 'createai_external_software_config_v2';
 const LIVE_BACKEND_STORAGE_KEY = 'llm_engine_live_backend_url_v2';
@@ -313,7 +312,8 @@ export function getLiveBackendUrl(): string {
       raw &&
       !raw.includes('localhost:3001') &&
       !raw.includes('localhost:5000') &&
-      !raw.includes('localhost:8000')
+      !raw.includes('localhost:8000') &&
+      !raw.includes('dashboard.render.com')
     ) {
       return raw.trim();
     }
@@ -350,12 +350,13 @@ export function getExternalConfig(): ExternalSoftwareConfig {
     const raw = localStorage.getItem(EXTERNAL_CONFIG_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Automatically route away from obsolete local ports 3001, 5000, 8000 to the live Render backend
+      // Automatically route away from obsolete local ports or dashboard URLs to the live Render website
       if (
         !parsed.endpointUrl ||
         parsed.endpointUrl.includes('localhost:3001') ||
         parsed.endpointUrl.includes('localhost:5000') ||
-        parsed.endpointUrl.includes('localhost:8000')
+        parsed.endpointUrl.includes('localhost:8000') ||
+        parsed.endpointUrl.includes('dashboard.render.com')
       ) {
         parsed.endpointUrl = DEFAULT_LIVE_RENDER_BACKEND_URL;
         parsed.activeSoftware = 'render_backend';

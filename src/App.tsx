@@ -585,7 +585,7 @@ export default function App() {
           rawErr.includes('rate-limit')
         ) {
           isRateLimit = true;
-          rawErr = 'Google Gemini free API rate limit / quota exceeded (429 RESOURCE_EXHAUSTED).';
+          rawErr = 'Google Gemini API quota temporarily exceeded (HTTP 429 Rate Limit).';
         }
 
         updateSessionMessages(currentSession.id, (prev) =>

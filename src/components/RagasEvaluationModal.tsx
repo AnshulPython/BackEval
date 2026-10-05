@@ -1049,7 +1049,7 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
                     {
                       id: 'render_backend',
                       name: 'Render Live Backend',
-                      tag: 'srv-daum9h67bikc73cur3tg (Live)',
+                      tag: 'createai-vepb.onrender.com (Live)',
                       defaultUrl: DEFAULT_LIVE_RENDER_BACKEND_URL,
                     },
                     {
