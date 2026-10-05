@@ -395,15 +395,18 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Validate API Key endpoint
 app.post('/api/validate-key', async (req: Request, res: Response) => {
   const { provider, apiKey, customBaseUrl } = req.body;
-  const trimmedKey = (apiKey || '').trim();
+  const rawKey = (apiKey || '').trim();
+  const trimmedKey = rawKey;
+  const isEnvPlaceholder = !rawKey || rawKey === 'built-in' || rawKey === 'env' || rawKey === 'default';
 
-  if (!trimmedKey) {
-    if (provider === 'gemini' && envGeminiKey) {
-      return res.json({
-        valid: true,
-        message: 'Using built-in Google Gemini API key!',
-        provider: 'gemini',
-        modelCount: (PROVIDER_MODELS.gemini || []).length,
+  // For Gemini, enable GEMINI_API_KEY environment variable usage for backend validation
+  const keyToValidate = (isEnvPlaceholder && provider === 'gemini') ? envGeminiKey : rawKey;
+
+  if (!keyToValidate) {
+    if (provider === 'gemini') {
+      return res.status(400).json({
+        valid: false,
+        error: 'Google Gemini API key required. Please provide your personal API key or configure GEMINI_API_KEY in your environment.',
       });
     }
     return res.status(400).json({ valid: false, error: 'API key is required. Please provide your personal API key.' });
@@ -411,10 +414,11 @@ app.post('/api/validate-key', async (req: Request, res: Response) => {
 
   try {
     if (provider === 'gemini') {
+      const isUsingEnv = keyToValidate === envGeminiKey;
       // Lightweight key validation: check models list instead of burning token generation quota
       try {
         const testRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${trimmedKey}&pageSize=1`
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToValidate}&pageSize=1`
         );
         if (!testRes.ok) {
           const errData = await testRes.json().catch(() => ({}));
@@ -423,12 +427,21 @@ app.post('/api/validate-key', async (req: Request, res: Response) => {
             // A 429 response proves the key is recognized and authorized by Google, but currently rate-limited
             return res.json({
               valid: true,
-              message: 'Valid Google Gemini key connected (Google rate limit currently active; automated fallback active).',
+              message: isUsingEnv
+                ? 'Server GEMINI_API_KEY authorized (Google rate limit currently active; automated fallback model active).'
+                : 'Valid Google Gemini key connected (Google rate limit currently active; automated fallback active).',
               provider: 'gemini',
               modelCount: (PROVIDER_MODELS.gemini || []).length,
+              usedEnvKey: isUsingEnv,
             });
           }
           if (status === 400 || status === 401 || status === 403) {
+            if (!isUsingEnv && envGeminiKey) {
+              return res.status(401).json({
+                valid: false,
+                error: `${errData?.error?.message || 'Invalid Gemini API key.'} (Leave empty to use server GEMINI_API_KEY)`,
+              });
+            }
             return res.status(401).json({
               valid: false,
               error: errData?.error?.message || 'Invalid Gemini API key. Please check your key at https://aistudio.google.com/app/apikey',
@@ -441,9 +454,12 @@ app.post('/api/validate-key', async (req: Request, res: Response) => {
 
       return res.json({
         valid: true,
-        message: 'Successfully validated Google Gemini API key!',
+        message: isUsingEnv
+          ? 'Successfully validated and connected via server GEMINI_API_KEY!'
+          : 'Successfully validated Google Gemini API key!',
         provider: 'gemini',
         modelCount: (PROVIDER_MODELS.gemini || []).length,
+        usedEnvKey: isUsingEnv,
       });
     }
 
@@ -2190,8 +2206,13 @@ app.post('/api/external/ping', async (req: Request, res: Response) => {
     const resp = await fetch(endpointUrl, {
       method: 'GET',
       headers,
+      signal: AbortSignal.timeout(12000),
     }).catch(async () => {
-      return await fetch(endpointUrl, { method: 'HEAD', headers });
+      return await fetch(endpointUrl, {
+        method: 'HEAD',
+        headers,
+        signal: AbortSignal.timeout(8000),
+      });
     });
 
     const latency = Date.now() - start;
@@ -2206,7 +2227,7 @@ app.post('/api/external/ping', async (req: Request, res: Response) => {
       latencyMs: latency,
       isRender,
       message: isRender
-        ? 'Successfully connected to live Render service deployment (createai-vepb.onrender.com).'
+        ? 'Successfully connected to live Render service deployment (https://createai-vepb.onrender.com).'
         : undefined,
     });
   } catch (err: any) {

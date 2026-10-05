@@ -1161,14 +1161,16 @@ export const RagasEvaluationModal: React.FC<RagasEvaluationModalProps> = ({
                   </div>
 
                   {/* Render Live Service Advisory */}
-                  {extConfig.endpointUrl?.includes('dashboard.render.com') && (
+                  {(extConfig.endpointUrl?.includes('createai-vepb.onrender.com') ||
+                    extConfig.endpointUrl?.includes('onrender.com') ||
+                    extConfig.endpointUrl?.includes('render.com')) && (
                     <div className="p-3 rounded-xl bg-[#8ab4f8]/10 border border-[#8ab4f8]/30 text-xs text-[#c4c7c5] space-y-1">
                       <div className="flex items-center gap-1.5 font-medium text-white">
                         <span className="w-2 h-2 rounded-full bg-[#81c995] animate-pulse" />
-                        <span>Render Live Deployment Configured ({LIVE_RENDER_SERVICE_ID})</span>
+                        <span>Render Live Deployment Configured ({LIVE_RENDER_SERVICE_ID}.onrender.com)</span>
                       </div>
                       <div className="text-[11px] text-[#8e918f] leading-relaxed">
-                        Currently targeting deploy <code className="text-[#8ab4f8]">{LIVE_RENDER_DEPLOY_ID}</code> on Render instead of localhost. If your service has a direct <code className="text-[#8ab4f8]">.onrender.com</code> public address, you can also paste that URL here.
+                        Currently targeting live Render deployment at <code className="text-[#8ab4f8]">https://createai-vepb.onrender.com</code>. Benchmarking and Ragas evaluations will communicate with this production endpoint.
                       </div>
                     </div>
                   )}

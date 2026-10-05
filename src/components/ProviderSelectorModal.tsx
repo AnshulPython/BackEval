@@ -272,7 +272,7 @@ export const ProviderSelectorModal: React.FC<ProviderSelectorModalProps> = ({
                       <span>Live Render Service: {LIVE_RENDER_SERVICE_ID}</span>
                     </div>
                     <p className="text-[10px] leading-relaxed">
-                      Connected to live Render deployment. If you have an <code className="text-[#8ab4f8]">.onrender.com</code> public address, you can also paste it directly.
+                      Connected to live Render deployment (<code className="text-[#8ab4f8]">https://createai-vepb.onrender.com</code>). You can also paste any custom backend proxy URL here.
                     </p>
                   </div>
                 </div>
