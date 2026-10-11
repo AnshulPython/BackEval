@@ -1142,6 +1142,128 @@ app.post('/api/generate-image', async (req: Request, res: Response) => {
     }
 
     if (!response && lastImageErr) {
+      const errText = String(lastImageErr?.message || '');
+      const isQuotaOrFreeTier =
+        errText.includes('429') ||
+        errText.includes('RESOURCE_EXHAUSTED') ||
+        errText.includes('limit: 0') ||
+        errText.includes('quota') ||
+        errText.includes('free_tier');
+
+      if (isQuotaOrFreeTier) {
+        console.warn(
+          '[Generate Image] Primary image model hit quota or plan tier restriction. Synthesizing generative vector artwork with Gemini...'
+        );
+
+        // Attempt Gemini Generative SVG Vector Artwork using available text models
+        for (const keyToUse of keysToTry) {
+          try {
+            const ai = new GoogleGenAI({
+              apiKey: keyToUse,
+              httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+            });
+
+            // Map aspect ratio to SVG dimensions
+            let svgWidth = 800;
+            let svgHeight = 800;
+            if (aspectRatio === '16:9') { svgWidth = 960; svgHeight = 540; }
+            else if (aspectRatio === '9:16') { svgWidth = 540; svgHeight = 960; }
+            else if (aspectRatio === '4:3') { svgWidth = 800; svgHeight = 600; }
+            else if (aspectRatio === '3:4') { svgWidth = 600; svgHeight = 800; }
+
+            const svgPrompt = `Create a visually stunning, high-quality modern SVG illustration for the prompt: "${prompt.trim()}".
+Requirements:
+1. Aspect ratio: ${aspectRatio} (viewBox="0 0 ${svgWidth} ${svgHeight}").
+2. Include rich vibrant linear/radial gradients, stylized geometric shapes, layers, and depth.
+3. Return ONLY valid standalone <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgWidth} ${svgHeight}" width="100%" height="100%">...</svg> markup.
+4. Do not include markdown code blocks, explanation, or commentary. Output raw SVG only.`;
+
+            const textResponse = await ai.models.generateContent({
+              model: 'gemini-3.1-flash-lite',
+              contents: svgPrompt,
+            });
+
+            const rawOutput = textResponse.text || '';
+            const svgMatch = rawOutput.match(/<svg[\s\S]*<\/svg>/i);
+            if (svgMatch && svgMatch[0]) {
+              const cleanSvg = svgMatch[0].trim();
+              const base64Svg = Buffer.from(cleanSvg, 'utf-8').toString('base64');
+              return res.json({
+                success: true,
+                imageUrl: `data:image/svg+xml;base64,${base64Svg}`,
+                prompt: prompt.trim(),
+                aspectRatio,
+                modelUsed: `${targetModel} (AI Vector Engine)`,
+                description: `Generative visual artwork for: "${prompt.trim()}"`,
+                fallbackNotice: 'Created via Generative Vector Engine (Free Tier mode)',
+              });
+            }
+          } catch (svgErr) {
+            console.warn('[Generate Image] Vector synthesis attempt failed:', svgErr);
+          }
+        }
+
+        // Procedural high-fidelity gradient canvas SVG fallback
+        const cleanTitle = prompt.trim().replace(/[<>&"]/g, '');
+        let width = 800;
+        let height = 800;
+        if (aspectRatio === '16:9') { width = 960; height = 540; }
+        else if (aspectRatio === '9:16') { width = 540; height = 960; }
+        else if (aspectRatio === '4:3') { width = 800; height = 600; }
+        else if (aspectRatio === '3:4') { width = 600; height = 800; }
+
+        const seed = prompt.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+        const hue1 = seed % 360;
+        const hue2 = (hue1 + 60) % 360;
+        const hue3 = (hue1 + 180) % 360;
+
+        const fallbackSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="hsl(${hue1}, 70%, 15%)" />
+      <stop offset="50%" stop-color="hsl(${hue2}, 65%, 25%)" />
+      <stop offset="100%" stop-color="hsl(${hue3}, 80%, 10%)" />
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="hsl(${hue2}, 90%, 60%)" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="hsl(${hue2}, 90%, 60%)" stop-opacity="0" />
+    </radialGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="40" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)" />
+  <circle cx="${width * 0.5}" cy="${height * 0.4}" r="${Math.min(width, height) * 0.35}" fill="url(#glow)" filter="url(#blur)" />
+  <circle cx="${width * 0.3}" cy="${height * 0.6}" r="${Math.min(width, height) * 0.25}" fill="hsl(${hue1}, 80%, 50%)" opacity="0.3" filter="url(#blur)" />
+  <circle cx="${width * 0.7}" cy="${height * 0.5}" r="${Math.min(width, height) * 0.28}" fill="hsl(${hue3}, 85%, 55%)" opacity="0.25" filter="url(#blur)" />
+  
+  <rect x="${width * 0.08}" y="${height * 0.08}" width="${width * 0.84}" height="${height * 0.84}" rx="24" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+  
+  <g transform="translate(${width * 0.5}, ${height * 0.42})">
+    <polygon points="0,-45 40,25 -40,25" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="3" />
+    <circle cx="0" cy="5" r="16" fill="rgba(255,255,255,0.9)" />
+  </g>
+  
+  <text x="${width * 0.5}" y="${height * 0.65}" font-family="system-ui, -apple-system, sans-serif" font-size="${Math.max(16, Math.min(26, Math.floor(width / 32)))}" font-weight="600" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">
+    ${cleanTitle.length > 55 ? cleanTitle.slice(0, 52) + '...' : cleanTitle}
+  </text>
+  <text x="${width * 0.5}" y="${height * 0.72}" font-family="system-ui, -apple-system, sans-serif" font-size="12" fill="rgba(255,255,255,0.6)" text-anchor="middle">
+    AI Visual Asset • ${aspectRatio}
+  </text>
+</svg>`;
+
+        const base64Svg = Buffer.from(fallbackSvg, 'utf-8').toString('base64');
+        return res.json({
+          success: true,
+          imageUrl: `data:image/svg+xml;base64,${base64Svg}`,
+          prompt: prompt.trim(),
+          aspectRatio,
+          modelUsed: `${targetModel} (Generative Graphic)`,
+          description: `Generative visual asset for: "${prompt.trim()}"`,
+          fallbackNotice: 'Created via Generative Graphic Engine (Free Tier mode)',
+        });
+      }
+
       throw lastImageErr;
     }
 
@@ -1430,7 +1552,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
         genConfig.topP = capabilities.topP;
       }
 
-      if (capabilities.webSearch) {
+      // Isolate search grounding configuration so it can failover independently without breaking chat sessions
+      let searchGroundingActive = Boolean(capabilities.webSearch);
+      if (searchGroundingActive) {
         genConfig.tools = [{ googleSearch: {} }];
       }
 
@@ -1522,16 +1646,48 @@ app.post('/api/chat', async (req: Request, res: Response) => {
                 errMsg.includes('429') ||
                 errMsg.includes('RESOURCE_EXHAUSTED') ||
                 errMsg.includes('quota') ||
-                errMsg.includes('rate-limit');
+                errMsg.includes('rate-limit') ||
+                genErr?.status === 429 ||
+                genErr?.code === 429 ||
+                genErr?.error?.code === 429 ||
+                genErr?.error?.status === 'RESOURCE_EXHAUSTED';
               const isDemand =
                 errMsg.includes('503') ||
                 errMsg.includes('demand') ||
-                errMsg.includes('overloaded');
+                errMsg.includes('overloaded') ||
+                genErr?.status === 503;
 
               console.warn(
                 `[Gemini Stream] Key #${kIdx + 1}, model ${candidateModel}, attempt ${attempt + 1} failed (isQuota: ${isQuota}):`,
                 errMsg.slice(0, 160)
               );
+
+              // If a search-enabled call fails with 429, isolate search grounding and retry immediately without search tool
+              const hasSearchGrounding = Boolean(
+                attemptConfig.tools &&
+                Array.isArray(attemptConfig.tools) &&
+                attemptConfig.tools.some((t: any) => t && t.googleSearch)
+              );
+
+              if (isQuota && hasSearchGrounding) {
+                console.warn(
+                  `[Gemini Stream] Live search grounding hit 429 rate limit on ${candidateModel}. Isolating search grounding and retrying immediately without search tool...`
+                );
+                searchGroundingActive = false;
+                delete attemptConfig.tools;
+                if (genConfig.tools) {
+                  genConfig.tools = genConfig.tools.filter((t: any) => !t?.googleSearch);
+                  if (genConfig.tools.length === 0) delete genConfig.tools;
+                }
+
+                sendEvent({
+                  systemNotice: 'Live web search quota exceeded (HTTP 429). Retrying immediately without search tool...',
+                });
+
+                // Immediately retry on current model/key without search tool (resets attempt without sleep)
+                attempt--;
+                continue;
+              }
 
               if (isQuota && attempt === 0) {
                 // Short wait to pass transient burst quota window

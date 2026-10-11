@@ -65,6 +65,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [plan, setPlan] = useState<ApiPlanTier>(() => getProviderPlan(activeProvider));
 
@@ -94,6 +95,7 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
     setIsGenerating(true);
     setErrorMessage(null);
     setIsQuotaError(false);
+    setNotice(null);
     setGeneratedImageUrl(null);
 
     const keys = getStoredApiKeys();
@@ -122,6 +124,9 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
       }
 
       setGeneratedImageUrl(data.imageUrl);
+      if (data.fallbackNotice) {
+        setNotice(data.fallbackNotice);
+      }
 
       // Notify parent to add image directly to chat session
       onImageGenerated({
@@ -152,7 +157,8 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
     if (!generatedImageUrl) return;
     const a = document.createElement('a');
     a.href = generatedImageUrl;
-    a.download = `createai_image_${Date.now()}.png`;
+    const isSvg = generatedImageUrl.startsWith('data:image/svg+xml');
+    a.download = `createai_image_${Date.now()}.${isSvg ? 'svg' : 'png'}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -376,6 +382,12 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                 />
               </div>
 
+              {notice && (
+                <div className="text-[11px] text-[#81c995] bg-[#81c995]/10 border border-[#81c995]/20 px-2.5 py-1 rounded-lg">
+                  {notice}
+                </div>
+              )}
+
               <div className="flex items-center justify-between text-xs pt-1">
                 <div className="flex items-center gap-2">
                   <button
@@ -400,7 +412,9 @@ export const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#282a2c] hover:bg-[#333538] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download PNG</span>
+                    <span>
+                      {generatedImageUrl.startsWith('data:image/svg+xml') ? 'Download SVG' : 'Download PNG'}
+                    </span>
                   </button>
                 </div>
 

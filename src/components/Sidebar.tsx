@@ -26,6 +26,7 @@ import {
   PanelLeftClose,
   Sun,
   Moon,
+  Github,
 } from 'lucide-react';
 import { ChatSession, AIProviderId, UserAccount, ThemeMode } from '../types';
 import { AI_PROVIDERS } from '../data/providersAndModels';
@@ -666,6 +667,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Sliders className="w-3.5 h-3.5 text-[#8e918f]" />
             <span>Settings</span>
           </button>
+
+          {/* GitHub Repository Link */}
+          <a
+            href="https://github.com/AnshulPython/BackEval"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-left hover:bg-[#282a2c] text-[#c4c7c5] hover:text-white transition-colors cursor-pointer touch-manipulation group"
+            title="View AnshulPython/BackEval repository on GitHub"
+            aria-label="View AnshulPython/BackEval repository on GitHub"
+          >
+            <div className="flex items-center gap-2.5">
+              <Github className="w-3.5 h-3.5 text-[#8e918f] group-hover:text-white transition-colors" />
+              <span>GitHub</span>
+            </div>
+            <span className="text-[10px] text-[#8e918f] font-mono group-hover:text-[#8ab4f8] transition-colors">
+              BackEval
+            </span>
+          </a>
         </div>
       </aside>
     </>

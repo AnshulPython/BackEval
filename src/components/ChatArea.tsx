@@ -44,6 +44,7 @@ import {
   Maximize2,
   Sun,
   Moon,
+  Github,
 } from 'lucide-react';
 import {
   AIModel,
@@ -577,6 +578,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <Key className="w-3.5 h-3.5 text-[#8ab4f8]" />
             <span className="hidden sm:inline">API Keys</span>
           </button>
+
+          {/* GitHub Repository Link Button */}
+          <a
+            href="https://github.com/AnshulPython/BackEval"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-[#1e1f20] hover:bg-[#282a2c] text-xs font-medium text-[#e3e3e3] hover:text-white border border-[#2d2f31] hover:border-[#8ab4f8]/50 transition-all ml-0.5 cursor-pointer touch-manipulation active:scale-95 shrink-0"
+            title="GitHub Repository: AnshulPython/BackEval"
+            aria-label="View AnshulPython/BackEval repository on GitHub"
+          >
+            <Github className="w-3.5 h-3.5 text-[#e3e3e3]" />
+            <span className="hidden md:inline text-[11px] font-mono text-[#c4c7c5]">GitHub</span>
+          </a>
         </div>
       </header>
 

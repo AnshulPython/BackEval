@@ -363,14 +363,14 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 
         {/* Model Cards Grid */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredModels.map((model) => {
+          {filteredModels.map((model, idx) => {
             const isSelected = activeModelId === model.id;
             const isAvailable = isModelAvailableForPlan(model, currentPlan);
             const isImageModel = model.capabilities?.includes('imageGeneration');
 
             return (
               <div
-                key={model.id}
+                key={`${model.id}_${idx}`}
                 onClick={() => handleModelCardClick(model)}
                 className={`p-4 rounded-2xl border text-left cursor-pointer transition-all flex flex-col justify-between group relative ${
                   isSelected

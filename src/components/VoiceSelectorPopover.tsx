@@ -442,7 +442,7 @@ export const VoiceSelectorPopover: React.FC<VoiceSelectorPopoverProps> = ({
 
           {/* Voices List */}
           <div className="space-y-2 max-h-[38vh] overflow-y-auto pr-1">
-            {filteredVoices.map((v) => {
+            {filteredVoices.map((v, idx) => {
               const isSelected = selectedURI === v.voiceURI;
               const isPlayingThis = testingURI === v.voiceURI;
               const isNatural =
@@ -455,7 +455,7 @@ export const VoiceSelectorPopover: React.FC<VoiceSelectorPopoverProps> = ({
 
               return (
                 <div
-                  key={v.voiceURI}
+                  key={`${v.voiceURI || v.name}_${v.lang}_${idx}`}
                   onClick={() => handleSelectVoice(v)}
                   className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between group ${
                     isSelected
